@@ -1,0 +1,341 @@
+// RESOURCEFLOW AI — Prisma schema (SQLite)
+// Maps the MongoDB collections from the spec to relational models.
+// Lists are stored as JSON strings because SQLite cannot store primitive lists.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────────────────────────
+// USERS + AUTH
+// ───────────────────────────────────────────────
+enum Role {
+  CITIZEN
+  RESPONDER
+  DISASTER_OFFICER
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(CITIZEN)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  incidents        Incident[]
+  approvals        Approval[]
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+  resourceOps      ResourceAssignment[] // responder assigned
+}
+
+// ───────────────────────────────────────────────
+// INCIDENTS
+// ───────────────────────────────────────────────
+enum IncidentType {
+  FLOOD
+  CYCLONE
+  EARTHQUAKE
+  LANDSLIDE
+  ROAD_BLOCKAGE
+  FIRE
+  MEDICAL
+  INFRASTRUCTURE
+  OTHER
+}
+
+enum IncidentStatus {
+  NEW
+  ANALYZING
+  VERIFICATION
+  PRIORITIZED
+  AWAITING_APPROVAL
+  ASSIGNED
+  IN_PROGRESS
+  DELAYED
+  ESCALATED
+  RESOLVED
+  CLOSED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model Incident {
+  id            String         @id @default(cuid())
+  incidentCode  String         @unique // RF-2026-000001
+  type          IncidentType
+  description   String
+  location      String
+  latitude      Float
+  longitude     Float
+  imageMeta     String?        // JSON: {filename, size, contentType}
+  status        IncidentStatus @default(NEW)
+  duplicateFlag Boolean        @default(false) // POSSIBLE_DUPLICATE
+
+  // AI analysis output (JSON strings)
+  aiSeverity            String?  // LOW/MEDIUM/HIGH/CRITICAL
+  aiPeopleAffected      Int?
+  aiUrgentNeeds         String?   // JSON array
+  aiRoadBlocked         Boolean?
+  aiInfrastructureDamage String? // JSON array
+  aiRiskFactors         String?   // JSON array
+  aiConfidence          Float?
+  aiMissingInfo         String?  // JSON array
+  aiAvailable           Boolean   @default(true)
+
+  // Risk engine output
+  riskScore   Float?
+  riskLevel   RiskLevel?
+  riskReasons String? // JSON array
+  weather     String? // JSON
+
+  // Clustering
+  clusterId String?
+
+  // Assignment + tracking
+  assignedResourceId String?
+  assignedAt        DateTime?
+  acknowledgedAt    DateTime?
+  startedAt         DateTime?
+  arrivedAt         DateTime?
+  resolvedAt        DateTime?
+  escalationLevel   Int      @default(0) // 0=none,1=responder,2=officer,3=supervisor
+
+  reportedById String
+  reportedBy   User   @relation(fields: [reportedById], references: [id])
+
+  events       IncidentEvent[]
+  approvals    Approval[]
+  assignments  ResourceAssignment[]
+  recommendations AIRecommendation[]
+  report       GeneratedReport?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([type])
+  @@index([clusterId])
+}
+
+model IncidentEvent {
+  id         String   @id @default(cuid())
+  incidentId String
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  eventType  String   // INCIDENT_CREATED, AI_ANALYSIS, etc.
+  data       String   // JSON
+  createdAt  DateTime @default(now())
+
+  @@index([incidentId])
+}
+
+model IncidentCluster {
+  id          String   @id @default(cuid())
+  clusterCode String   @unique // FC-001
+  type        IncidentType
+  confidence  Float
+  incidentIds String   // JSON array of incident ids/codes
+  geoSpreadKm Float
+  latestReportAt DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ───────────────────────────────────────────────
+// RESOURCES + ASSIGNMENTS
+// ───────────────────────────────────────────────
+enum ResourceType {
+  AMBULANCE
+  RESCUE_TEAM
+  FIRE_TEAM
+  EMERGENCY_VEHICLE
+  MEDICAL_SUPPLY
+  FOOD_SUPPLY
+  WATER_SUPPLY
+}
+
+enum ResourceStatus {
+  AVAILABLE
+  ASSIGNED
+  EN_ROUTE
+  ON_SCENE
+  UNAVAILABLE
+}
+
+model Resource {
+  id            String         @id @default(cuid())
+  resourceCode  String         @unique // R14
+  name          String
+  type          ResourceType
+  latitude      Float
+  longitude     Float
+  capacity      Int
+  status        ResourceStatus @default(AVAILABLE)
+  eta           Int?           // minutes
+  lastUpdated   DateTime       @default(now())
+
+  assignments ResourceAssignment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([type])
+}
+
+model ResourceAssignment {
+  id          String   @id @default(cuid())
+  resourceId  String
+  incidentId  String
+  status      String   @default("ASSIGNED") // ASSIGNED, REPLACED, CANCELLED
+  isPrimary   Boolean  @default(true)
+  reason      String?
+  assignedById String?
+  assignedAt  DateTime @default(now())
+  replacedAt  DateTime?
+
+  resource  Resource  @relation(fields: [resourceId], references: [id])
+  incident  Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  responder User?    @relation(fields: [assignedById], references: [id])
+
+  @@index([resourceId])
+  @@index([incidentId])
+}
+
+// ───────────────────────────────────────────────
+// APPROVALS + AI RECOMMENDATIONS
+// ───────────────────────────────────────────────
+enum ApprovalDecision {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Approval {
+  id              String           @id @default(cuid())
+  incidentId      String
+  resourceId      String?
+  recommendation  String           // JSON: recommended + alternatives + reason
+  decision        ApprovalDecision @default(PENDING)
+  reviewerId      String?
+  reviewer        User?            @relation(fields: [reviewerId], references: [id])
+  reason          String?
+  reviewedAt      DateTime?
+  createdAt       DateTime         @default(now())
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([decision])
+}
+
+model AIRecommendation {
+  id         String   @id @default(cuid())
+  incidentId String
+  recType    String   // INCIDENT_ANALYSIS, RESOURCE_OPTIMIZATION, REASSIGNMENT
+  payload    String   // JSON
+  source     String   @default("ai") // "ai" or "fallback"
+  createdAt  DateTime @default(now())
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId])
+}
+
+// ───────────────────────────────────────────────
+// NOTIFICATIONS + AUDIT + REPORTS
+// ───────────────────────────────────────────────
+enum NotificationType {
+  INFO
+  WARNING
+  CRITICAL
+  APPROVAL_REQUIRED
+  ESCALATION
+  RESOLUTION
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  message   String
+  read      Boolean          @default(false)
+  userId    String?
+  user      User?            @relation(fields: [userId], references: [id])
+  entityId  String?
+  createdAt DateTime         @default(now())
+
+  @@index([read])
+  @@index([userId])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  timestamp    DateTime @default(now())
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id])
+  role         String?
+  action       String   // LOGIN, INCIDENT_CREATED, AI_ANALYSIS, ...
+  entityId     String?
+  previousState String?
+  newState     String?
+  reason       String?
+
+  @@index([action])
+}
+
+model GeneratedReport {
+  id         String   @id @default(cuid())
+  incidentId String   @unique
+  content    String   // JSON: summary, timeline, resources, etc.
+  createdAt  DateTime @default(now())
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+}
+
+// ───────────────────────────────────────────────
+// SIMULATION (separate state — never modifies real data)
+// ───────────────────────────────────────────────
+enum SimulationStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model SimulationRun {
+  id         String           @id @default(cuid())
+  scenario   String           // FLOOD, CYCLONE, ...
+  status     SimulationStatus @default(RUNNING)
+  config     String           // JSON
+  metrics    String?          // JSON: baseline vs resourceflow
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  events     SimulationEvent[]
+
+  @@index([scenario])
+}
+
+model SimulationEvent {
+  id          String   @id @default(cuid())
+  runId       String
+  run         SimulationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  simTimeMin  Int      // T+minutes offset
+  eventType   String
+  label       String
+  data        String  // JSON
+  createdAt   DateTime @default(now())
+
+  @@index([runId])
+}
