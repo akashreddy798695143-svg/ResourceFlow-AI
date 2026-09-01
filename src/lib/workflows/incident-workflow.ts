@@ -4,13 +4,40 @@
 // No manual button clicks required for internal steps.
 
 import { db } from '@/lib/db'
-import { recordIncidentEvent, recordAudit } from '@/lib/events'
+import { recordIncidentEvent, recordAudit, broadcastStatusUpdate } from '@/lib/events'
 import { analyzeIncident } from '@/lib/agents/incident-agent'
 import { recommendResource } from '@/lib/agents/resource-agent'
 import { calculateRisk } from '@/lib/services/risk-service'
 import { getWeatherCached } from '@/lib/services/weather-service'
 import { clusterIncident } from '@/lib/services/clustering-service'
 import { pushNotification } from '@/lib/notifications'
+import type { NotificationType } from '@prisma/client'
+
+// Helper: create a notification targeted to the citizen who reported the incident.
+async function notifyCitizen(incidentId: string, type: NotificationType, message: string) {
+  const inc = await db.incident.findUnique({ where: { id: incidentId }, select: { reportedById: true } })
+  if (!inc) return
+  await pushNotification({ type, message, entityId: incidentId, userId: inc.reportedById })
+}
+
+// Citizen-friendly public messages keyed by incident status.
+// These are the messages the citizen sees in their Track Incident view.
+const PUBLIC_MESSAGES: Record<string, string> = {
+  NEW: 'Your report has been received and is being processed.',
+  ANALYZING: 'Our AI is analysing your report to understand the severity.',
+  VERIFICATION: 'Your report is being verified and prioritised.',
+  PRIORITIZED: 'Your report has been prioritised. A response team is being identified.',
+  AWAITING_APPROVAL: 'A response team has been recommended. Awaiting officer approval.',
+  ASSIGNED: 'A response team has been assigned to your incident.',
+  IN_PROGRESS: 'A response team is working on your incident.',
+  DELAYED: 'The response is delayed — the system is re-evaluating resources.',
+  ESCALATED: 'Your incident has been escalated for priority handling.',
+  RESOLVED: 'Your incident has been resolved.',
+  CLOSED: 'Your incident has been closed.',
+}
+export function publicMessageFor(status: string): string {
+  return PUBLIC_MESSAGES[status] || 'Status updated.'
+}
 
 export async function runIncidentWorkflow(incidentId: string) {
   const incident = await db.incident.findUnique({ where: { id: incidentId } })
@@ -167,6 +194,14 @@ export async function runIncidentWorkflow(incidentId: string) {
         label: `Officer approval required for ${rec.recommended_resource.code}`,
         resourceId: rec.recommended_resource.id,
       })
+      await broadcastStatusUpdate({
+        incidentId,
+        incidentCode: incident.incidentCode,
+        status: 'AWAITING_APPROVAL',
+        publicMessage: publicMessageFor('AWAITING_APPROVAL'),
+        previousStatus: 'PRIORITIZED',
+      })
+      await notifyCitizen(incidentId, 'INFO', publicMessageFor('AWAITING_APPROVAL'))
       await pushNotification({
         type: 'APPROVAL_REQUIRED',
         message: `Approval required for ${incident.incidentCode}: assign ${rec.recommended_resource.code} (${rec.recommended_resource.name}) — ETA ${rec.recommended_resource.eta_minutes}min`,
@@ -288,6 +323,16 @@ export async function assignResource(incidentId: string, resourceId: string, ass
     newState: resource.resourceCode,
     reason: reason || 'Approved assignment',
   })
+  // Citizen-facing: status is now ASSIGNED + targeted notification + realtime broadcast
+  await broadcastStatusUpdate({
+    incidentId,
+    incidentCode: (await db.incident.findUnique({ where: { id: incidentId }, select: { incidentCode: true } }))?.incidentCode,
+    status: 'ASSIGNED',
+    publicMessage: publicMessageFor('ASSIGNED'),
+    previousStatus: 'AWAITING_APPROVAL',
+  })
+  await notifyCitizen(incidentId, 'INFO', publicMessageFor('ASSIGNED'))
+  // Officer-facing: keep the existing broadcast notification for officers/responders
   await pushNotification({
     type: 'INFO',
     message: `Resource ${resource.resourceCode} assigned to incident. Awaiting acknowledgement.`,
@@ -324,6 +369,8 @@ export async function reassignIncident(incidentId: string, reason: string, exclu
     entityId: incidentId,
     reason,
   })
+  await broadcastStatusUpdate({ incidentId, incidentCode: incident.incidentCode, status: 'PRIORITIZED', publicMessage: 'The assigned resource is no longer available. The system is finding an alternative response team.', previousStatus: incident.status })
+  await notifyCitizen(incidentId, 'WARNING', 'The assigned resource is no longer available. The system is finding an alternative response team.')
   // Re-run resource recommendation
   const resources = await db.resource.findMany({
     where: { id: excludeResourceId ? { not: excludeResourceId } : undefined },
@@ -363,6 +410,8 @@ export async function reassignIncident(incidentId: string, reason: string, exclu
       label: `Alternative approval required for ${rec.recommended_resource.code}`,
       resourceId: rec.recommended_resource.id,
     })
+    await broadcastStatusUpdate({ incidentId, incidentCode: incident.incidentCode, status: 'AWAITING_APPROVAL', publicMessage: 'An alternative response team has been identified. Awaiting officer approval.', previousStatus: 'PRIORITIZED' })
+    await notifyCitizen(incidentId, 'INFO', 'An alternative response team has been identified. Awaiting officer approval.')
     await pushNotification({
       type: 'APPROVAL_REQUIRED',
       message: `Reassignment: approve ${rec.recommended_resource.code} for incident ${incident.incidentCode}`,
@@ -379,6 +428,7 @@ export async function reassignIncident(incidentId: string, reason: string, exclu
 export async function escalateIncident(incidentId: string, reason: string, level: number) {
   const incident = await db.incident.findUnique({ where: { id: incidentId } })
   if (!incident) return
+  const previousStatus = incident.status
   const newLevel = Math.max(incident.escalationLevel, level)
   await db.incident.update({
     where: { id: incidentId },
@@ -390,6 +440,8 @@ export async function escalateIncident(incidentId: string, reason: string, level
     reason,
   })
   await recordAudit({ action: 'ESCALATION', entityId: incidentId, newState: `LEVEL ${newLevel}`, reason })
+  await broadcastStatusUpdate({ incidentId, incidentCode: incident.incidentCode, status: 'ESCALATED', publicMessage: publicMessageFor('ESCALATED'), previousStatus })
+  await notifyCitizen(incidentId, 'ESCALATION', publicMessageFor('ESCALATED'))
   await pushNotification({
     type: 'ESCALATION',
     message: `Incident ${incident.incidentCode} escalated to LEVEL ${newLevel}. Reason: ${reason}`,
@@ -411,12 +463,18 @@ export async function advanceResponse(incidentId: string, stage: 'ACK' | 'START'
   if (stage === 'ACK' && !incident.acknowledgedAt) {
     await db.incident.update({ where: { id: incidentId }, data: { acknowledgedAt: now, status: 'IN_PROGRESS' } })
     await recordIncidentEvent(incidentId, 'RESPONSE_ACKNOWLEDGED', { label: 'Responder acknowledged assignment' })
+    await broadcastStatusUpdate({ incidentId, incidentCode: incident.incidentCode, status: 'IN_PROGRESS', publicMessage: 'Your response team has acknowledged the assignment and is preparing to depart.', previousStatus: incident.status })
+    await notifyCitizen(incidentId, 'INFO', 'Your response team has acknowledged the assignment and is preparing to depart.')
   } else if (stage === 'START' && !incident.startedAt) {
     await db.incident.update({ where: { id: incidentId }, data: { startedAt: now, status: 'IN_PROGRESS' } })
     await recordIncidentEvent(incidentId, 'RESPONSE_STARTED', { label: 'Responder en route' })
+    await broadcastStatusUpdate({ incidentId, incidentCode: incident.incidentCode, status: 'IN_PROGRESS', publicMessage: 'Your response team is en route to the incident.', previousStatus: incident.status })
+    await notifyCitizen(incidentId, 'INFO', 'Your response team is en route to the incident.')
   } else if (stage === 'ARRIVE' && !incident.arrivedAt) {
     await db.incident.update({ where: { id: incidentId }, data: { arrivedAt: now, status: 'IN_PROGRESS' } })
     await recordIncidentEvent(incidentId, 'RESPONSE_ARRIVED', { label: 'Responder on scene' })
+    await broadcastStatusUpdate({ incidentId, incidentCode: incident.incidentCode, status: 'IN_PROGRESS', publicMessage: 'Your response team has arrived on scene. Work is in progress.', previousStatus: incident.status })
+    await notifyCitizen(incidentId, 'INFO', 'Your response team has arrived on scene. Work is in progress.')
   } else if (stage === 'RESOLVE') {
     await resolveIncident(incidentId, byUserId)
   }
@@ -435,13 +493,17 @@ export async function resolveIncident(incidentId: string, byUserId?: string) {
       where: { id: incident.assignedResourceId },
       data: { status: 'AVAILABLE', lastUpdated: now },
     })
+    // Mark the assignment as COMPLETED (not ASSIGNED) so it no longer triggers
+    // conflict detection for future incidents that might use the same resource.
     await db.resourceAssignment.updateMany({
       where: { incidentId, resourceId: incident.assignedResourceId, status: 'ASSIGNED' },
-      data: { status: 'ASSIGNED' },
+      data: { status: 'COMPLETED' },
     })
   }
   await recordIncidentEvent(incidentId, 'INCIDENT_RESOLVED', { label: 'Incident resolved' })
   await recordAudit({ userId: byUserId, action: 'INCIDENT_RESOLVED', entityId: incidentId, newState: 'RESOLVED' })
+  await broadcastStatusUpdate({ incidentId, incidentCode: incident.incidentCode, status: 'RESOLVED', publicMessage: publicMessageFor('RESOLVED'), previousStatus: incident.status })
+  await notifyCitizen(incidentId, 'RESOLUTION', publicMessageFor('RESOLVED'))
   await pushNotification({ type: 'RESOLUTION', message: `Incident ${incident.incidentCode} resolved.`, entityId: incidentId })
   await generateIncidentReport(incidentId)
 }
@@ -503,9 +565,12 @@ async function markDelayed(incidentId: string, reason: string) {
   const inc = await db.incident.findUnique({ where: { id: incidentId } })
   if (!inc) return
   if (inc.status === 'DELAYED' || inc.status === 'ESCALATED') return
+  const previousStatus = inc.status
   await db.incident.update({ where: { id: incidentId }, data: { status: 'DELAYED' } })
   await recordIncidentEvent(incidentId, 'RESPONSE_DELAYED', { label: `Response delayed — ${reason}`, reason })
   await recordAudit({ action: 'RESPONSE_DELAYED', entityId: incidentId, reason })
+  await broadcastStatusUpdate({ incidentId, incidentCode: inc.incidentCode, status: 'DELAYED', publicMessage: publicMessageFor('DELAYED'), previousStatus })
+  await notifyCitizen(incidentId, 'WARNING', publicMessageFor('DELAYED'))
   await pushNotification({ type: 'CRITICAL', message: `Delayed: ${reason} (incident ${inc.incidentCode})`, entityId: incidentId })
   // Auto-escalate at level 2 if delay persists
   await escalateIncident(incidentId, `Auto-escalation: ${reason}`, 2)

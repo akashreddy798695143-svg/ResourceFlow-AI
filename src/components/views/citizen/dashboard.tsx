@@ -32,9 +32,26 @@ export function CitizenDashboardView() {
 
   useEffect(() => { load() }, [load])
 
-  // Refresh on realtime events affecting incidents
+  // Refresh on realtime events affecting incidents — listen for ALL status transitions
   useRealtimeEvents(useCallback((e: DashboardEvent) => {
-    if (e.type.startsWith('INCIDENT') || e.type === 'NOTIFICATION') load()
+    if (
+      e.type.startsWith('INCIDENT') ||
+      e.type === 'NOTIFICATION' ||
+      e.type === 'RESOURCE_ASSIGNED' ||
+      e.type === 'APPROVAL_GRANTED' ||
+      e.type === 'APPROVAL_REJECTED' ||
+      e.type === 'APPROVAL_REQUIRED' ||
+      e.type === 'REASSIGNMENT' ||
+      e.type === 'RESOURCE_UNAVAILABLE' ||
+      e.type === 'RESPONSE_ACKNOWLEDGED' ||
+      e.type === 'RESPONSE_STARTED' ||
+      e.type === 'RESPONSE_ARRIVED' ||
+      e.type === 'RESPONSE_DELAYED' ||
+      e.type === 'RISK_CALCULATED' ||
+      e.type === 'RESOURCE_RECOMMENDED'
+    ) {
+      load()
+    }
   }, [load]))
 
   const total = incidents.length

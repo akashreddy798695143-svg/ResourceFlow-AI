@@ -48,6 +48,38 @@ export async function recordIncidentEvent(
   }
 }
 
+// Broadcast a canonical INCIDENT_STATUS_UPDATED event.
+// This is the event that drives citizen-facing real-time updates:
+//   officer approves → backend broadcasts INCIDENT_STATUS_UPDATED
+//   → citizen dashboard + track view reload.
+// Always send the incident code + new status + a citizen-friendly public message.
+export async function broadcastStatusUpdate(params: {
+  incidentId: string
+  incidentCode?: string
+  status: string
+  publicMessage: string
+  previousStatus?: string
+}) {
+  // Look up the code if not provided
+  let incidentCode = params.incidentCode
+  if (!incidentCode) {
+    const inc = await db.incident.findUnique({ where: { id: params.incidentId }, select: { incidentCode: true } })
+    incidentCode = inc?.incidentCode
+  }
+  await broadcastEvent({
+    type: 'INCIDENT_STATUS_UPDATED',
+    label: `${incidentCode ?? params.incidentId}: ${params.status} — ${params.publicMessage}`,
+    incidentId: params.incidentId,
+    data: {
+      incident_id: incidentCode ?? params.incidentId,
+      incidentId: params.incidentId,
+      status: params.status,
+      previousStatus: params.previousStatus,
+      public_message: params.publicMessage,
+    },
+  })
+}
+
 export interface AuditEntry {
   userId?: string
   role?: string

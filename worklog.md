@@ -97,3 +97,66 @@ Stage Summary:
 - Real-time WebSocket updates across the dashboard
 - Professional dark "command center" UI with amber accents and severity color system
 - Sticky footer on all pages, responsive layout
+
+---
+Task ID: BUGFIX-APPROVAL-SYNC
+Agent: orchestrator (main)
+Task: Fix officer approval not reflecting in citizen tracking (workflow synchronization bug)
+
+Root Cause:
+- Backend `assignResource()` DID update the incident status to ASSIGNED correctly (no DB bug there).
+- The citizen Track Incident view performed a one-time fetch on mount and never refreshed — no real-time subscription, no refresh button.
+- The citizen Dashboard's realtime handler only listened for `e.type.startsWith('INCIDENT')`, but approval broadcasts `RESOURCE_ASSIGNED` and `APPROVAL_GRANTED` (neither starts with "INCIDENT"), so the dashboard never reloaded after an officer approved.
+- The track API returned generic stage labels ("Resource assigned") instead of citizen-friendly ones, and had no public_message field.
+- No citizen-targeted notification was created on assignment — only a broadcast with officer-oriented wording.
+- Pre-existing related bug: `resolveIncident` set the ResourceAssignment status to "ASSIGNED" (a no-op), so old assignments lingered and caused false conflict-detection loops during reassignment.
+
+Fixes Applied:
+
+1. src/lib/events.ts
+   - Added `broadcastStatusUpdate()` helper that broadcasts a canonical `INCIDENT_STATUS_UPDATED` event with `incident_id`, `status`, `public_message`, and `previousStatus` — this is the event citizens subscribe to for live updates.
+
+2. src/lib/workflows/incident-workflow.ts
+   - Added `notifyCitizen()` helper that creates a notification targeted to the citizen who reported the incident (userId = reportedById).
+   - Added `publicMessageFor()` mapping of each status to a citizen-friendly public message.
+   - `assignResource()`: now broadcasts INCIDENT_STATUS_UPDATED (status=ASSIGNED, "A response team has been assigned to your incident.") + creates a citizen-targeted INFO notification.
+   - `advanceResponse()` ACK/START/ARRIVE: each transition now broadcasts INCIDENT_STATUS_UPDATED + creates a citizen-targeted notification ("acknowledged", "en route", "arrived on scene").
+   - `resolveIncident()`: broadcasts INCIDENT_STATUS_UPDATED (RESOLVED) + citizen RESOLUTION notification. Fixed the assignment-status bug — assignments are now marked COMPLETED (not left ASSIGNED) so they no longer trigger false conflicts.
+   - `escalateIncident()`, `markDelayed()`, `reassignIncident()`: each broadcasts INCIDENT_STATUS_UPDATED + citizen-targeted notification so the citizen always sees the latest state.
+
+3. src/app/api/incidents/track/route.ts
+   - Now returns `currentStage` (granular citizen-facing label), `publicMessage` (per-active-stage message), and a `stages[]` array with `key/label/done/active/at/message` for the visual timeline.
+   - The 7 stages are: Report Received, Under Review, Verified, Response Team Assigned, Responder En Route, In Progress, Resolved — each with ✓/○/● markers computed from the incident's actual state (assignedAt, startedAt, arrivedAt, resolvedAt, status).
+   - Special handling for DELAYED/ESCALATED: the active stage becomes the latest completed stage with a delayed/escalated message.
+
+4. src/components/views/citizen/track-incident.tsx (full rewrite)
+   - Subscribes to realtime events: reloads the incident's current status on any INCIDENT_* / RESOURCE_ASSIGNED / APPROVAL_GRANTED / INCIDENT_STATUS_UPDATED / RESPONSE_* event (matched by incident code).
+   - Fallback: auto-refetches every 15s in case WebSocket is unavailable.
+   - Visual stage timeline with ✓ (done, green CheckCircle2), ● (active, spinning Loader2), ○ (pending, muted Circle).
+   - Current stage + public message displayed in a highlighted banner (color-coded: green for resolved, red for delayed/escalated, primary for active).
+   - "Refresh" button (manual fallback) next to the status badge.
+   - LIVE indicator (pulsing green dot).
+
+5. src/components/views/citizen/dashboard.tsx
+   - Broadened the realtime event handler to also reload on RESOURCE_ASSIGNED, APPROVAL_GRANTED, APPROVAL_REJECTED, APPROVAL_REQUIRED, REASSIGNMENT, RESOURCE_UNAVAILABLE, RESPONSE_ACKNOWLEDGED, RESPONSE_STARTED, RESPONSE_ARRIVED, RESPONSE_DELAYED, RISK_CALCULATED, RESOURCE_RECOMMENDED — so the citizen dashboard now refreshes whenever an officer acts on their incident.
+
+Verification (end-to-end via curl + Agent Browser + VLM):
+- Officer approved RF-2026-000004 → incident status AWAITING_APPROVAL → ASSIGNED in DB ✓
+- Track API returned status=ASSIGNED, currentStage="Response Team Assigned", publicMessage="A response team has been assigned to your incident." ✓
+- Visual stages: ✓ Report Received, ✓ Under Review, ✓ Verified, ✓ Response Team Assigned (active), ○ Responder En Route, ○ In Progress, ○ Resolved ✓
+- Citizen received targeted INFO notification "A response team has been assigned to your incident." ✓
+- Audit logs written: APPROVAL_GRANTED + RESOURCE_ASSIGNED ✓
+- Subsequent transitions ACK → START → ARRIVE → RESOLVE all updated DB + track API + citizen notifications:
+  - ACK: currentStage="Responder En Route", message="Your response team is en route to the incident."
+  - ARRIVE: currentStage="In Progress", message="Your response team has arrived on scene. Work is in progress."
+  - RESOLVE: currentStage="Resolved", message="Your incident has been resolved.", all 7 stages ✓
+- Browser VLM verification confirmed the Track Incident view renders correctly at every state (AWAITING_APPROVAL, ASSIGNED, RESOLVED) with status badge, current stage, public message, visual timeline, and Refresh button ✓
+- `bun run lint` passes clean ✓
+
+Stage Summary:
+- The officer approval → citizen tracking synchronization bug is fully fixed.
+- Every workflow transition (ASSIGN, ACK, START, ARRIVE, RESOLVE, ESCALATE, DELAY, REASSIGN) now: updates DB, creates incident event, writes audit log, creates citizen-targeted notification, and broadcasts INCIDENT_STATUS_UPDATED over WebSocket.
+- The citizen Track Incident view updates in real time (WebSocket) with a 15s polling fallback + manual Refresh button.
+- Citizen-facing data is appropriately abstracted (no officer-only AI/risk/resource intelligence exposed) — only the 7-stage timeline + public message.
+- Also fixed a pre-existing resolveIncident assignment-status bug that caused false resource conflicts during reassignment.
+
