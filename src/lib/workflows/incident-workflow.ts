@@ -112,6 +112,7 @@ export async function runIncidentWorkflow(incidentId: string) {
       description: incident.description,
       incidentType: incident.type,
       location: incident.location,
+      language: incident.language,  // pass the citizen's stated language as a hint
       imageMeta: incident.imageMeta ? JSON.parse(incident.imageMeta) : null,
     })
 
@@ -127,6 +128,8 @@ export async function runIncidentWorkflow(incidentId: string) {
         aiConfidence: analysis.confidence,
         aiMissingInfo: JSON.stringify(analysis.missing_information),
         aiAvailable: analysis.source === 'ai',
+        // If the AI detected a language and the incident didn't have one, store it
+        language: incident.language || analysis.detected_language || null,
         status: 'VERIFICATION',
       },
     })

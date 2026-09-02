@@ -101,6 +101,23 @@ model Incident {
   status        IncidentStatus @default(NEW)
   duplicateFlag Boolean        @default(false) // POSSIBLE_DUPLICATE
 
+  // ─── Citizen identity (auto-derived from authenticated session — never trusted from frontend) ──
+  // These are denormalised at creation time so reports remain queryable even if the user
+  // account is later modified. reportedById (below) is the FK for auth/ownership checks.
+  citizenName   String?
+  citizenPhone  String?
+  citizenEmail  String?
+
+  // ─── Original citizen input + language ─────────────────────────────────
+  originalDescription String?  // the raw description as typed/spoken (may be in Telugu/Hindi/English)
+  transcription       String?  // for voice input: the transcribed text (same as originalDescription for typed)
+  language            String?  // ISO 639-1 code: te, hi, en, or null
+  inputMethod         String?  // "text" | "voice"
+
+  // ─── Location capture metadata ─────────────────────────────────────────
+  locationAccuracy    Float?   // GPS accuracy in meters (if available)
+  locationTimestamp    DateTime? // when the GPS fix was obtained
+
   // AI analysis output (JSON strings)
   aiSeverity            String?  // LOW/MEDIUM/HIGH/CRITICAL
   aiPeopleAffected      Int?

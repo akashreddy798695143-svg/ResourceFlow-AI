@@ -354,3 +354,46 @@ Stage Summary:
 - All existing features preserved: GPS, voice reporting (existing), AI analysis, clustering, risk, resource optimization, officer approval, real-time dashboard, adaptive reassignment, escalation, auto report, Gmail report delivery
 - bun run lint passes; dev server HTTP 200
 
+
+---
+Task ID: FEATURE-DUAL-OTP-GPS-VOICE-MULTILINGUAL
+Agent: orchestrator (main)
+Task: Add dual OTP (phone+email) registration, auto GPS, multilingual voice reporting, AI multilingual understanding
+
+Work Log:
+- Schema: added Incident.citizenName/citizenPhone/citizenEmail (auto-derived from session), originalDescription, transcription, language (ISO 639-1), inputMethod (text|voice), locationAccuracy, locationTimestamp. Pushed via bun run db:push.
+- Updated OTP service: supports dual OTP (phone via SMS + email via EMAIL channel) — each verified independently. Never logs the OTP code (only "generated" with masked identifier). 6-digit, 5-min expiry, max 5 attempts, 60s resend cooldown, argon2 hashed, single-use.
+- Rewrote /api/auth/register: dual OTP flow — creates user as INACTIVE, generates + sends phone OTP (SMS) + email OTP (email) separately. Returns dualOtp=true + phoneOtpSent/emailOtpSent flags. SMS failure → "Unable to send OTP" (never faked). Email sent via working Gmail SMTP.
+- Rewrote /api/auth/verify-otp: verifies one channel at a time (SMS or EMAIL). Marks phoneVerified/emailVerified independently. Activates account ONLY when BOTH are verified. Returns nextChannel hint after partial verification.
+- Rewrote /api/auth/resend-otp: resends a specific channel OTP with cooldown.
+- Built src/lib/services/geocode-service.ts: reverse geocoding via OpenStreetMap Nominatim (configurable via REVERSE_GEOCODER_URL env). Never fabricates location names. On failure returns null → caller displays "Location name unavailable". Never blocks incident submission.
+- Added /api/geocode/reverse endpoint (authenticated): returns {displayName, shortName, source} or {unavailable:true}.
+- Updated /api/incidents POST: auto-derives citizen identity (name, phone, email) from the authenticated session — NEVER trusts frontend-provided citizen_id/phone/email. Accepts language, inputMethod, locationAccuracy, locationTimestamp from frontend. If no location name provided, reverse-geocodes from lat/lng. Returns the attached citizen + location in the response for transparency.
+- Updated AI incident agent: SYSTEM_PROMPT now instructs the AI to understand Telugu/Hindi/English (and any language) directly — no translation step. Returns structured fields in English + detected_language (ISO 639-1). Added "detected_language" to the output. Confidence lowered if description is too short/unclear.
+- Updated incident workflow: passes incident.language to analyzeIncident() as a hint; stores AI-detected language if the frontend didn't provide one.
+- Rebuilt Report Incident view (citizen): auto GPS via navigator.geolocation.getCurrentPosition() on mount; mini Leaflet map showing detected location + accuracy circle; voice input via Web Speech API with language selector (తెలుగు/English/हिन्दी); interim transcript display; recognized text is editable before submit (never auto-submitted); manual map fallback if GPS denied; location name auto-resolved via /api/geocode/reverse; read-only citizen identity banner ("auto-attached from your account"); location accuracy + timestamp displayed.
+- Built MiniMap component (react-leaflet, dynamic import ssr:false) for the report view.
+- Rewrote Register view: 2-stage dual OTP flow — stage 1 collects name+phone+email+password+role; stage 2 shows separate phone + email OTP inputs with verify + resend buttons each, ✓ Verified badges, and activates only when both verified.
+- Updated .env.example with REVERSE_GEOCODER_URL/REVERSE_GEOCODER_REFERER docs.
+
+End-to-end verification (curl):
+1. ✅ Dual OTP registration: user created inactive, phoneOtpSent (SMS demo FAILED, never faked) + emailOtpSent (Gmail SMTP SENT), dualOtp=true
+2. ✅ Wrong phone OTP → "Invalid OTP code" with remainingAttempts=4
+3. ✅ Citizen login (resourceflowai@gmail.com) → session
+4. ✅ Reverse geocode → "Location name unavailable" (Nominatim rate-limited, graceful fallback — never fabricated)
+5. ✅ Incident created with Telugu description + language=te + inputMethod=voice + GPS metadata (accuracy=15m, timestamp)
+6. ✅ Citizen identity AUTO-ATTACHED from session: citizenName=Test Citizen, citizenEmail=resourceflowai@gmail.com, reportedById set — NEVER sent from frontend
+7. ✅ Original Telugu description preserved: originalDescription="మా ప్రాంతంలో వరద నీరు ఇళ్లలోకి వస్తోంది..."
+8. ✅ AI understood the Telugu description (real AI, aiAvailable=true): severity=HIGH, confidence=0.8, urgent_needs=[evacuation,medical,ambulance,rescue team], road_blocked=true (detected "రోడ్డు కూడా బ్లాక్ అయింది"), language=te
+9. ✅ bun run lint passes clean
+
+Stage Summary:
+- Dual OTP (phone + email) registration: both must be verified before activation; SMS demo mode FAILED (never faked); email via working Gmail SMTP
+- Auto GPS: navigator.geolocation on page mount; lat/lng/accuracy/timestamp captured; Leaflet mini-map; manual fallback if denied
+- Reverse geocoding: Nominatim with graceful "Location name unavailable" fallback (never fabricated)
+- Multilingual voice: Web Speech API with తెలుగు/English/हिन्दी selector; interim transcript; review + edit before submit; never auto-submit
+- AI multilingual understanding: Telugu description → structured English output (severity, urgent needs, road blocked) with confidence 0.8; original Telugu preserved
+- Citizen identity auto-attached from authenticated session — never trusted from frontend
+- All existing features preserved (AI analysis, clustering, risk, resource optimization, approval, dashboard, reassignment, escalation, auto report, Gmail, OTP, multi-channel notifications, notification prefs + logs)
+- The complete hackathon demo workflow now works end-to-end with voice + GPS + dual OTP
+

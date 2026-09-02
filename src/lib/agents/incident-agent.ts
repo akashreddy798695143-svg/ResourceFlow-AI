@@ -1,4 +1,7 @@
 // Incident Agent — analyses a citizen report and returns a structured, validated JSON.
+// Supports multilingual input: Telugu (te), Hindi (hi), English (en) — and any other
+// language the underlying LLM can understand. The AI understands the original description
+// directly; no translation step is required.
 // Falls back to a deterministic heuristic if the AI is unavailable. Never fabricates AI output.
 
 import { askAI, extractJson } from '@/lib/ai-client'
@@ -14,41 +17,49 @@ export interface IncidentAnalysis {
   risk_factors: string[]
   confidence: number // 0-1
   missing_information: string[]
+  detected_language?: string  // the language the AI detected in the description
   source: 'ai' | 'fallback'
 }
 
-const SYSTEM_PROMPT = `You are an emergency-response incident analysis agent. You receive a citizen disaster report and must return STRICT JSON ONLY (no prose, no markdown fences) describing the incident. Use this exact schema:
+const SYSTEM_PROMPT = `You are an emergency-response incident analysis agent. You receive a citizen disaster report — which may be written in Telugu, Hindi, English, or any other language — and you must return STRICT JSON ONLY (no prose, no markdown fences) describing the incident. Use this exact schema:
 
 {
   "incident_type": "FLOOD|CYCLONE|EARTHQUAKE|LANDSLIDE|ROAD_BLOCKAGE|FIRE|MEDICAL|INFRASTRUCTURE|OTHER",
   "severity": "LOW|MEDIUM|HIGH|CRITICAL",
   "people_affected_estimate": <integer 0-100000>,
-  "urgent_needs": [<short strings like "evacuation","medical","food","water","shelter">],
+  "urgent_needs": [<short English strings like "evacuation","medical","food","water","shelter","ambulance","rescue team">],
   "road_blocked": <true|false>,
-  "infrastructure_damage": [<short strings>],
-  "risk_factors": [<short strings>],
+  "infrastructure_damage": [<short English strings>],
+  "risk_factors": [<short English strings>],
   "confidence": <0-1>,
-  "missing_information": [<short strings>]
+  "missing_information": [<short English strings>],
+  "detected_language": "<ISO 639-1 code: te, hi, en, or other>"
 }
 
 Rules:
+- Understand the citizen's original description directly in its native language (Telugu, Hindi, English, etc.). Do NOT ask the citizen to translate.
+- Always return the structured fields in English so the dashboard can use them, but the original citizen description is preserved separately by the caller.
+- "detected_language" should be the ISO 639-1 code of the language you detected in the description (e.g. "te" for Telugu, "hi" for Hindi, "en" for English).
 - Be conservative; if data is ambiguous, lower confidence and list what is missing.
 - Never invent exact measurements you cannot know (e.g. precise building counts). Prefer qualitative damage descriptions.
+- If the description is too short or unclear to analyse meaningfully, set confidence below 0.3 and add entries to missing_information.
 - Output must be valid JSON parseable by JSON.parse.`
 
 export async function analyzeIncident(input: {
   description: string
   incidentType: IncidentType | string
   location?: string
+  language?: string | null  // ISO 639-1 hint from the frontend (te/hi/en) or null
   imageMeta?: { filename?: string; size?: number; contentType?: string } | null
 }): Promise<IncidentAnalysis> {
+  const langHint = input.language ? `\n- Stated language: ${input.language} (use this as a hint; verify from the text itself)` : ''
   const userPrompt = `Citizen report:
 - Type: ${input.incidentType}
 - Location: ${input.location ?? 'not provided'}
 - Description: ${input.description}
-- Image attached: ${input.imageMeta ? `yes (${input.imageMeta.contentType ?? 'unknown'}, ${input.imageMeta.size ?? 0} bytes)` : 'no'}
+- Image attached: ${input.imageMeta ? `yes (${input.imageMeta.contentType ?? 'unknown'}, ${input.imageMeta.size ?? 0} bytes)` : 'no'}${langHint}
 
-Return the JSON now.`
+Analyse the description in its original language and return the JSON now.`
 
   const res = await askAI(SYSTEM_PROMPT, userPrompt)
   if (res.ok) {
@@ -83,6 +94,7 @@ function normalizeAnalysis(o: any): IncidentAnalysis {
     risk_factors: Array.isArray(o.risk_factors) ? o.risk_factors.slice(0, 12) : [],
     confidence: Math.max(0, Math.min(1, Number(o.confidence) || 0.6)),
     missing_information: Array.isArray(o.missing_information) ? o.missing_information.slice(0, 12) : [],
+    detected_language: typeof o.detected_language === 'string' ? o.detected_language.slice(0, 5).toLowerCase() : undefined,
     source: 'ai',
   }
 }
