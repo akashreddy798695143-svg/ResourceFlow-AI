@@ -203,3 +203,198 @@ export function renderOfficerReportEmail(data: OfficerReportData): { subject: st
 </body></html>`
   return { subject, html }
 }
+
+// ─── REGISTRATION CONFIRMATION ────────────────────────────────────────────
+export function renderRegistrationEmail(data: { name: string; email: string; role: string }): { subject: string; html: string } {
+  const subject = 'RESOURCEFLOW AI – Registration Successful'
+  const html = `
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <div style="max-width:560px;margin:24px auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+    ${brandHeader()}
+    <div style="padding:28px">
+      <p style="margin:0 0 16px 0;color:#374151;font-size:15px;line-height:1.6">Hello ${data.name},</p>
+      <p style="margin:0 0 16px 0;color:#374151;font-size:15px;line-height:1.6">Your RESOURCEFLOW AI account has been verified successfully.</p>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:16px 0">
+        <table style="width:100%;border-collapse:collapse">
+          ${field('Name', data.name)}
+          ${field('Email', data.email)}
+          ${field('Role', data.role.replace(/_/g, ' '))}
+        </table>
+      </div>
+      <p style="margin:0 0 8px 0;color:#374151;font-size:14px;line-height:1.6">You can now sign in to the RESOURCEFLOW AI platform and ${roleDescription(data.role)}.</p>
+    </div>
+    ${footer()}
+  </div>
+</body></html>`
+  return { subject, html }
+}
+
+function roleDescription(role: string): string {
+  const map: Record<string, string> = {
+    CITIZEN: 'report incidents and track their status',
+    RESPONDER: 'view assigned incidents and update response status',
+    DISASTER_OFFICER: 'review AI recommendations and approve resource assignments',
+    ADMIN: 'manage users, resources, and system configuration',
+  }
+  return map[role] || 'use the platform'
+}
+
+// ─── INCIDENT NOTIFICATION (short event emails for officers) ───────────────
+export interface IncidentEventEmailData {
+  incidentCode: string
+  incidentType: string
+  location: string
+  status: string
+  riskLevel?: string | null
+  riskScore?: number | null
+  timestamp: string
+  actionRequired?: string
+  additionalContext?: string  // e.g. "AI confidence: 0.85" for officers
+}
+
+export function renderIncidentEventEmail(data: IncidentEventEmailData, subjectPrefix: string): { subject: string; html: string } {
+  const subject = `RESOURCEFLOW AI – ${subjectPrefix}: ${data.incidentCode}`
+  const html = `
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <div style="max-width:560px;margin:24px auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+    ${brandHeader()}
+    <div style="padding:28px">
+      <p style="margin:0 0 16px 0;color:#374151;font-size:15px;line-height:1.6">${subjectPrefix}</p>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:16px 0">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-family:monospace;font-size:14px;font-weight:bold;color:#f59e0b">${data.incidentCode}</div>
+          ${statusBadge(data.status)}
+        </div>
+        <table style="width:100%;border-collapse:collapse">
+          ${field('Incident Type', data.incidentType)}
+          ${field('Location', data.location)}
+          ${field('Current Status', data.status.replace(/_/g, ' '))}
+          ${data.riskLevel ? field('Risk Level', `${data.riskLevel}${data.riskScore != null ? ` · ${data.riskScore}/100` : ''}`) : ''}
+          ${field('Timestamp', fmtDate(data.timestamp))}
+          ${data.actionRequired ? field('Action Required', data.actionRequired) : ''}
+          ${data.additionalContext ? field('Context', data.additionalContext) : ''}
+        </table>
+      </div>
+      <p style="margin:0;color:#6b7280;font-size:12px">Open the RESOURCEFLOW AI dashboard for full details.</p>
+    </div>
+    ${footer()}
+  </div>
+</body></html>`
+  return { subject, html }
+}
+
+// ─── AI ANALYSIS REPORT (officer-only, detailed) ──────────────────────────
+export interface AnalysisReportData {
+  incidentCode: string
+  incidentType: string
+  description: string
+  detectedLanguage?: string
+  location: string
+  latitude?: number
+  longitude?: number
+  severity: string
+  peopleAffected: number | null
+  urgentNeeds: string[]
+  roadBlocked: boolean | null
+  infrastructureDamage: string[]
+  riskFactors: string[]
+  riskScore: number | null
+  riskLevel: string | null
+  aiConfidence: number | null
+  recommendedResources: Array<{ code: string; name: string; etaMin: number }>
+  missingInformation: string[]
+  analysisTimestamp: string
+}
+
+export function renderAnalysisReportEmail(data: AnalysisReportData): { subject: string; html: string } {
+  const subject = `RESOURCEFLOW AI – AI Incident Analysis Report: ${data.incidentCode}`
+  const html = `
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <div style="max-width:680px;margin:24px auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+    ${brandHeader()}
+    <div style="padding:28px">
+      <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:10px 14px;margin-bottom:20px;color:#92400e;font-size:12px;font-weight:500">
+        AI INCIDENT ANALYSIS REPORT — Internal, for authorized officers only.
+      </div>
+      <p style="margin:0 0 16px 0;color:#374151;font-size:15px;line-height:1.6">AI analysis completed for incident ${data.incidentCode}.</p>
+
+      <h3 style="color:#111827;font-size:14px;margin:20px 0 10px 0;border-bottom:2px solid #f59e0b;padding-bottom:6px">Incident</h3>
+      <table style="width:100%;border-collapse:collapse">
+        ${field('Incident ID', data.incidentCode)}
+        ${field('Type', data.incidentType)}
+        ${field('Location', data.location)}
+        ${data.latitude != null && data.longitude != null ? field('Coordinates', `${data.latitude.toFixed(4)}, ${data.longitude.toFixed(4)}`) : ''}
+        ${data.detectedLanguage ? field('Detected Language', data.detectedLanguage) : ''}
+      </table>
+
+      <h3 style="color:#111827;font-size:14px;margin:20px 0 10px 0;border-bottom:2px solid #f59e0b;padding-bottom:6px">Description</h3>
+      <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;background:#f9fafb;padding:12px;border-radius:6px">${data.description}</p>
+
+      <h3 style="color:#111827;font-size:14px;margin:20px 0 10px 0;border-bottom:2px solid #f59e0b;padding-bottom:6px">AI Analysis</h3>
+      <table style="width:100%;border-collapse:collapse">
+        ${field('Severity', data.severity)}
+        ${field('People Affected (est.)', data.peopleAffected != null ? String(data.peopleAffected) : '—')}
+        ${field('Road Blockage', data.roadBlocked == null ? '—' : data.roadBlocked ? 'YES' : 'NO')}
+        ${field('Urgent Needs', data.urgentNeeds.length ? data.urgentNeeds.join(', ') : '—')}
+        ${field('Infrastructure Impact', data.infrastructureDamage.length ? data.infrastructureDamage.join(', ') : '—')}
+        ${field('Risk Factors', data.riskFactors.length ? data.riskFactors.join('; ') : '—')}
+        ${field('AI Confidence', data.aiConfidence != null ? `${(data.aiConfidence * 100).toFixed(0)}%` : '—')}
+      </table>
+
+      <h3 style="color:#111827;font-size:14px;margin:20px 0 10px 0;border-bottom:2px solid #f59e0b;padding-bottom:6px">Risk Assessment</h3>
+      <table style="width:100%;border-collapse:collapse">
+        ${field('Risk Score', data.riskScore != null ? `${data.riskScore}/100` : '—')}
+        ${field('Risk Category', data.riskLevel || '—')}
+      </table>
+
+      <h3 style="color:#111827;font-size:14px;margin:20px 0 10px 0;border-bottom:2px solid #f59e0b;padding-bottom:6px">Recommended Resources</h3>
+      ${data.recommendedResources.length > 0 ? `
+      <table style="width:100%;border-collapse:collapse">
+        <tr style="background:#f3f4f6"><th style="text-align:left;padding:6px 8px;font-size:11px;color:#6b7280;text-transform:uppercase">Code</th><th style="text-align:left;padding:6px 8px;font-size:11px;color:#6b7280;text-transform:uppercase">Resource</th><th style="text-align:left;padding:6px 8px;font-size:11px;color:#6b7280;text-transform:uppercase">ETA</th></tr>
+        ${data.recommendedResources.map((r) => `<tr><td style="padding:6px 8px;font-family:monospace;font-size:12px">${r.code}</td><td style="padding:6px 8px;font-size:12px">${r.name}</td><td style="padding:6px 8px;font-size:12px">${r.etaMin} min</td></tr>`).join('')}
+      </table>` : '<p style="color:#6b7280;font-size:13px">No resources recommended yet.</p>'}
+
+      ${data.missingInformation.length > 0 ? `
+      <h3 style="color:#111827;font-size:14px;margin:20px 0 10px 0;border-bottom:2px solid #f59e0b;padding-bottom:6px">Missing Information</h3>
+      <p style="color:#6b7280;font-size:13px">${data.missingInformation.join('; ')}</p>` : ''}
+
+      <p style="margin:20px 0 0 0;color:#6b7280;font-size:11px">Analysis timestamp: ${fmtDate(data.analysisTimestamp)} · Prototype decision-support score — not a medically or scientifically validated model.</p>
+    </div>
+    ${footer()}
+  </div>
+</body></html>`
+  return { subject, html }
+}
+
+// ─── CITIZEN INCIDENT NOTIFICATION (public-safe) ──────────────────────────
+export function renderCitizenIncidentEmail(data: { incidentCode: string; incidentType: string; location: string; status: string; message: string; timestamp: string }): { subject: string; html: string } {
+  const subject = `RESOURCEFLOW AI – ${data.incidentCode}: ${data.message}`
+  const html = `
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <div style="max-width:560px;margin:24px auto;background:white;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+    ${brandHeader()}
+    <div style="padding:28px">
+      <p style="margin:0 0 16px 0;color:#374151;font-size:15px;line-height:1.6">Your incident has been updated.</p>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:16px 0">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-family:monospace;font-size:14px;font-weight:bold;color:#f59e0b">${data.incidentCode}</div>
+          ${statusBadge(data.status)}
+        </div>
+        <table style="width:100%;border-collapse:collapse">
+          ${field('Incident Type', data.incidentType)}
+          ${field('Location', data.location)}
+          ${field('Update', data.message)}
+          ${field('Timestamp', fmtDate(data.timestamp))}
+        </table>
+      </div>
+      <p style="margin:0;color:#6b7280;font-size:12px">Track your incident on the RESOURCEFLOW AI platform for the latest status.</p>
+    </div>
+    ${footer()}
+  </div>
+</body></html>`
+  return { subject, html }
+}

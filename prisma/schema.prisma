@@ -31,11 +31,26 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // OTP-based registration / verification
+  phone            String?  // E.164 format (e.g. +97798XXXXXXXX); unique if set
+  phoneVerified    Boolean  @default(false)
+  emailVerified    Boolean  @default(false)
+
+  // Notification preferences (per channel). Critical/emergency notifications follow
+  // system policy and are NOT suppressible by unauthorized users (handled in code).
+  smsNotifications    Boolean @default(true)
+  emailNotifications  Boolean @default(true)
+  inAppNotifications  Boolean @default(true)
+
   incidents        Incident[]
   approvals        Approval[]
   auditLogs        AuditLog[]
   notifications    Notification[]
   resourceOps      ResourceAssignment[] // responder assigned
+  otpVerifications OtpVerification[]
+  notificationLogs NotificationLog[]
+
+  @@index([phone])
 }
 
 // ───────────────────────────────────────────────
@@ -340,6 +355,54 @@ model EmailNotification {
 
   @@index([incidentId])
   @@index([recipientUserId])
+  @@index([status])
+}
+
+// ───────────────────────────────────────────────
+// OTP VERIFICATION — registration / password reset / phone verification
+// ───────────────────────────────────────────────
+model OtpVerification {
+  id          String   @id @default(cuid())
+  identifier   String   // phone (E.164) or email
+  channel     String   // "SMS" or "EMAIL"
+  purpose     String   // "REGISTRATION" | "PASSWORD_RESET" | "PHONE_VERIFY"
+  codeHash    String   // argon2 hash of the 6-digit code — NEVER store plaintext
+  expiresAt   DateTime // 5 minutes from creation
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(5)
+  consumed    Boolean  @default(false)
+  consumedAt  DateTime?
+  userId      String?  // the user being verified (if known)
+  user        User?    @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([identifier, purpose])
+  @@index([expiresAt])
+}
+
+// ───────────────────────────────────────────────
+// NOTIFICATION LOG — unified delivery tracking across channels (SMS/EMAIL/IN_APP)
+// Complements the existing in-app Notification model (which powers the bell dropdown).
+// ───────────────────────────────────────────────
+model NotificationLog {
+  id               String   @id @default(cuid())
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id])
+  incidentId       String?
+  notificationType String   // REGISTRATION_VERIFIED, INCIDENT_CREATED, APPROVAL_REQUIRED, ...
+  channel          String   // "SMS" | "EMAIL" | "IN_APP"
+  recipient        String   // phone or email or "in-app:{userId}"
+  title            String
+  message          String
+  status           String   @default("PENDING") // PENDING | SENT | FAILED | READ
+  sentAt           DateTime?
+  readAt           DateTime?
+  errorMessage     String?  // safe error string (never credentials)
+  createdAt        DateTime @default(now())
+
+  @@index([userId])
+  @@index([incidentId])
+  @@index([notificationType])
   @@index([status])
 }
 

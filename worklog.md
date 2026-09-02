@@ -312,3 +312,45 @@ Stage Summary:
 - ✅ Backend logging shows full SMTP lifecycle without exposing credentials
 - The complete workflow now works end-to-end: REPORT → AI → RISK → RESOURCE → APPROVAL → ASSIGNMENT → RESPONSE → RESOLUTION → AUTO REPORT → REAL EMAIL → AUDIT LOG
 
+
+---
+Task ID: FEATURE-OTP-MULTICHANNEL
+Agent: orchestrator (main)
+Task: Add OTP-based registration + multi-channel (SMS/Email/In-app) notification system
+
+Work Log:
+- Schema: added User.phone + phoneVerified + emailVerified + smsNotifications/emailNotifications/inAppNotifications prefs; new OtpVerification model (identifier, channel, purpose, codeHash, expiresAt, attempts, maxAttempts, consumed, userId) + NotificationLog model (userId, incidentId, notificationType, channel, recipient, title, message, status, sentAt, readAt, errorMessage). Pushed via bun run db:push.
+- Built src/lib/services/otp-service.ts: 6-digit OTP via crypto.randomInt, argon2id hashed (never plaintext), 5-min TTL, max 5 attempts, 60s resend cooldown, single-use (consumed on success), safe logging (identifier masked). generateOtp() + verifyOtp() with rate-limiting + cooldown.
+- Built src/lib/services/sms-service.ts: provider abstraction (SmsProvider interface → ConsoleSmsProvider demo + TwilioSmsProvider real). SMS_PROVIDER env var selects. Demo mode returns FAILED (never fakes "SMS Sent"). Twilio via fetch REST API. maskPhone() + isValidPhone() helpers.
+- Built src/lib/services/notification-service.ts: unified dispatchNotification() fan-out to SMS/EMAIL/IN_APP based on notification type criticality + recipient prefs + contact info. CRITICAL_TYPES (ESCALATION, APPROVAL_REQUIRED, RESPONSE_DELAYED, SYSTEM_SECURITY) always go out regardless of prefs. Writes NotificationLog (PENDING → SENT/FAILED) + in-app Notification. getUsersByRole() + getUserRecipient() helpers. Audit summary per dispatch.
+- Built src/lib/services/analysis-report-service.ts: generate AI analysis report after AI analysis, sends concise SMS summary + full HTML email to officers/responders only (citizens NEVER see AI confidence/risk factors/resources). Records NotificationLog entries + audit. detectLanguage() for Telugu/Hindi/English.
+- Updated email-templates.ts: added renderRegistrationEmail(), renderIncidentEventEmail(), renderAnalysisReportEmail() (officer-only detailed), renderCitizenIncidentEmail() (public-safe).
+- Rewrote /api/auth/register (OTP flow): validates input + phone, creates user as INACTIVE (active=false), generates OTP, sends via SMS + email backup. Returns otpRequired + expiresAt. /api/auth/verify-otp: verifies OTP → activates account → sends registration confirmation SMS + email + in-app notification. /api/auth/resend-otp: resend with cooldown.
+- New /api/notifications/preferences (GET/PATCH): per-user channel prefs; criticalNonDisablable flag surfaced.
+- New /api/notifications/logs (GET): admin sees all, officer sees incident + own, citizen/responder see own; recipients masked for non-admins/non-self.
+- Updated /api/admin/email-config to return BOTH email + SMS status (no credentials).
+- Wired multi-channel notifications into incident-workflow.ts at: AI_ANALYSIS_COMPLETED (analysis report to officers), APPROVAL_REQUIRED (critical → officers), RESOURCE_ASSIGNED (citizen public-safe + officers internal), RESPONSE_DELAYED (critical), INCIDENT_ESCALATED (critical), INCIDENT_RESOLVED (citizen + officers). Added dispatchIncidentEventNotification() helper that splits officer-only vs citizen+officer dispatch with public-safe citizen emails.
+- Frontend: rewrote Register view with 2-stage OTP flow (register → verify OTP). Added NotificationPreferencesCard + NotificationLogsCard to Settings view (all users).
+- Updated .env.example with SMTP + SMS_PROVIDER/SMS_SENDER_ID/SMS_ACCOUNT_SID/SMS_API_KEY docs.
+
+Verification (end-to-end via curl):
+1. ✅ OTP registration: user created inactive, OTP generated (argon2 hashed), sent via SMS (FAILED demo) + email
+2. ✅ Wrong OTP → "Invalid OTP code" with remainingAttempts=4
+3. ✅ Correct OTP → account activated, session set, registration confirmation SMS (FAILED demo, never faked) + email (SENT via real Gmail SMTP) + in-app (SENT)
+4. ✅ Citizen incident created → AI analysis → analysis report dispatched to officers
+5. ✅ Notification logs: 3 entries for REGISTRATION_VERIFIED — EMAIL (FAILED to fake address), SMS (FAILED demo mode), IN_APP (SENT). Incident notifications: AI_ANALYSIS_COMPLETED via EMAIL + SMS (demo FAILED) + IN_APP (SENT)
+6. ✅ Notification preferences: all true, hasPhone, phoneVerified, criticalNonDisablable
+7. ✅ Backend logs: "SMTP connection established + authentication successful" + "Email sent successfully" (real emails delivered); "[sms] unavailable" (demo mode, never faked)
+8. ✅ /api/admin/email-config returns email configured:true (smtp.gmail.com:587, res***@gmail.com) + SMS provider:console configured:false — NO credentials exposed
+9. ✅ bun run lint passes clean
+
+Stage Summary:
+- OTP-based registration fully implemented: 6-digit, 5-min expiry, max 5 attempts, 60s resend cooldown, argon2 hashed, account stays INACTIVE until verified
+- Multi-channel notification system: SMS (Twilio/console demo), Email (Gmail SMTP working), In-app — unified via dispatchNotification() with role + event + prefs logic
+- AI analysis report generated after AI analysis → SMS summary + full HTML email to officers only (citizens NEVER see AI confidence/risk factors/resources)
+- Final incident report emails already working (from previous task) — now also SMS summary to officers + citizen
+- Critical notifications (ESCALATION, APPROVAL_REQUIRED, RESPONSE_DELAYED) always delivered regardless of user prefs
+- Notification logs track every channel attempt (PENDING → SENT/FAILED) with masked recipients for non-admins
+- All existing features preserved: GPS, voice reporting (existing), AI analysis, clustering, risk, resource optimization, officer approval, real-time dashboard, adaptive reassignment, escalation, auto report, Gmail report delivery
+- bun run lint passes; dev server HTTP 200
+

@@ -12,6 +12,9 @@ import { getWeatherCached } from '@/lib/services/weather-service'
 import { clusterIncident } from '@/lib/services/clustering-service'
 import { pushNotification } from '@/lib/notifications'
 import { sendResolutionEmails } from '@/lib/workflows/email-workflow'
+import { sendAnalysisReport } from '@/lib/services/analysis-report-service'
+import { dispatchNotification, getUserRecipient, getUsersByRole } from '@/lib/services/notification-service'
+import { renderIncidentEventEmail, renderCitizenIncidentEmail } from '@/lib/services/email-templates'
 import type { NotificationType } from '@prisma/client'
 
 // Helper: create a notification targeted to the citizen who reported the incident.
@@ -19,6 +22,62 @@ async function notifyCitizen(incidentId: string, type: NotificationType, message
   const inc = await db.incident.findUnique({ where: { id: incidentId }, select: { reportedById: true } })
   if (!inc) return
   await pushNotification({ type, message, entityId: incidentId, userId: inc.reportedById })
+}
+
+// Helper: dispatch a multi-channel (SMS + email + in-app) notification for an incident event.
+// If officerOnly=true, only officers/admins receive it (citizens NEVER see internal info).
+// If officerOnly=false, BOTH the citizen who reported AND officers are notified — but the
+// citizen receives a public-safe message via renderCitizenIncidentEmail, while officers
+// receive the officer-oriented emailSubject/emailHtml.
+async function dispatchIncidentEventNotification(
+  incidentId: string,
+  type: 'INCIDENT_CREATED' | 'INCIDENT_PRIORITY_CHANGED' | 'APPROVAL_REQUIRED' | 'RESOURCE_ASSIGNED' | 'RESOURCE_REASSIGNED' | 'RESPONSE_DELAYED' | 'INCIDENT_ESCALATED' | 'INCIDENT_RESOLVED' | 'REPORT_GENERATED',
+  content: {
+    title: string
+    message: string  // SMS-friendly short message
+    emailSubject?: string
+    emailHtml?: string  // officer/internal HTML
+    officerOnly?: boolean
+  }
+) {
+  try {
+    const officers = await getUsersByRole(['DISASTER_OFFICER', 'ADMIN'])
+    // Officer dispatch (officer-oriented email HTML)
+    await dispatchNotification(type, officers, {
+      title: content.title,
+      message: content.message,
+      emailSubject: content.emailSubject,
+      emailHtml: content.emailHtml,
+      incidentId,
+    })
+    // Citizen dispatch — only if not officerOnly, and with a public-safe email
+    if (!content.officerOnly) {
+      const incident = await db.incident.findUnique({ where: { id: incidentId }, include: { reportedBy: true } })
+      if (incident?.reportedBy) {
+        const citizenRecipient = await getUserRecipient(incident.reportedById)
+        if (citizenRecipient) {
+          // Build a public-safe email (no AI confidence, risk factors, resource details)
+          const { html: citizenHtml, subject: citizenSubject } = renderCitizenIncidentEmail({
+            incidentCode: incident.incidentCode,
+            incidentType: incident.type.replace(/_/g, ' '),
+            location: incident.location,
+            status: incident.status,
+            message: content.message,
+            timestamp: new Date().toISOString(),
+          })
+          await dispatchNotification(type, [citizenRecipient], {
+            title: content.title,
+            message: content.message,
+            emailSubject: citizenSubject,
+            emailHtml: citizenHtml,
+            incidentId,
+          })
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[workflow] dispatchIncidentEventNotification failed:', e)
+  }
 }
 
 // Citizen-friendly public messages keyed by incident status.
@@ -93,6 +152,10 @@ export async function runIncidentWorkflow(incidentId: string) {
       newState: `severity=${analysis.severity}, source=${analysis.source}`,
       reason: 'AI incident analysis',
     })
+    // Dispatch the AI analysis report to authorized officers (SMS summary + full HTML email)
+    // Internal officer-only information (AI confidence, risk factors, recommended resources)
+    // is NEVER sent to citizens.
+    await sendAnalysisReport(incidentId).catch((e) => console.error('[workflow] analysis report failed:', e))
 
     // 2) Duplicate detection + clustering
     const updated = await db.incident.findUnique({ where: { id: incidentId } })
@@ -207,6 +270,24 @@ export async function runIncidentWorkflow(incidentId: string) {
         type: 'APPROVAL_REQUIRED',
         message: `Approval required for ${incident.incidentCode}: assign ${rec.recommended_resource.code} (${rec.recommended_resource.name}) — ETA ${rec.recommended_resource.eta_minutes}min`,
         entityId: incidentId,
+      })
+      // Multi-channel: SMS + email + in-app to all officers (APPROVAL_REQUIRED is critical)
+      await dispatchIncidentEventNotification(incidentId, 'APPROVAL_REQUIRED', {
+        title: `Approval Required: ${incident.incidentCode}`,
+        message: `${incident.type.replace(/_/g, ' ')} at ${incident.location} — recommend ${rec.recommended_resource.code}, ETA ${rec.recommended_resource.eta_minutes}min. Officer approval needed.`,
+        emailSubject: `RESOURCEFLOW AI – Approval Required: ${incident.incidentCode}`,
+        emailHtml: renderIncidentEventEmail({
+          incidentCode: incident.incidentCode,
+          incidentType: incident.type.replace(/_/g, ' '),
+          location: incident.location,
+          status: 'AWAITING_APPROVAL',
+          riskLevel: incident.riskLevel,
+          riskScore: incident.riskScore,
+          timestamp: new Date().toISOString(),
+          actionRequired: `Approve resource ${rec.recommended_resource.code} (${rec.recommended_resource.name})`,
+          additionalContext: `Recommended ETA: ${rec.recommended_resource.eta_minutes} min · Distance: ${rec.recommended_resource.distance_km} km`,
+        }, 'Approval Required').html,
+        officerOnly: true,  // never send to citizens
       })
     } else {
       // No eligible resource → escalate immediately
@@ -339,6 +420,23 @@ export async function assignResource(incidentId: string, resourceId: string, ass
     message: `Resource ${resource.resourceCode} assigned to incident. Awaiting acknowledgement.`,
     entityId: incidentId,
   })
+  // Multi-channel: RESOURCE_ASSIGNED notification to citizen (public-safe) + officers (internal)
+  await dispatchIncidentEventNotification(incidentId, 'RESOURCE_ASSIGNED', {
+    title: `Resource Assigned: ${incident.incidentCode}`,
+    message: `${resource.resourceCode} (${resource.name}) assigned to ${incident.type.replace(/_/g, ' ')} at ${incident.location}. ETA ${resource.eta ?? '?'} min.`,
+    emailSubject: `RESOURCEFLOW AI – Resource Assigned: ${incident.incidentCode}`,
+    emailHtml: renderIncidentEventEmail({
+      incidentCode: incident.incidentCode,
+      incidentType: incident.type.replace(/_/g, ' '),
+      location: incident.location,
+      status: 'ASSIGNED',
+      riskLevel: incident.riskLevel,
+      riskScore: incident.riskScore,
+      timestamp: new Date().toISOString(),
+      actionRequired: `Acknowledge assignment of ${resource.resourceCode} (${resource.name})`,
+    }, 'Resource Assigned').html,
+    officerOnly: false,  // citizen gets public-safe email; officers get internal
+  })
 }
 
 // ───────────────────────────────────────────────
@@ -448,6 +546,23 @@ export async function escalateIncident(incidentId: string, reason: string, level
     message: `Incident ${incident.incidentCode} escalated to LEVEL ${newLevel}. Reason: ${reason}`,
     entityId: incidentId,
   })
+  // Multi-channel: ESCALATION is critical → SMS + email + in-app to officers (officer-only) + citizen (public-safe)
+  await dispatchIncidentEventNotification(incidentId, 'INCIDENT_ESCALATED', {
+    title: `ESCALATED LEVEL ${newLevel}: ${incident.incidentCode}`,
+    message: `Escalated to LEVEL ${newLevel}. ${reason}. ${incident.type.replace(/_/g, ' ')} at ${incident.location}.`,
+    emailSubject: `RESOURCEFLOW AI – Incident Escalated: ${incident.incidentCode} (L${newLevel})`,
+    emailHtml: renderIncidentEventEmail({
+      incidentCode: incident.incidentCode,
+      incidentType: incident.type.replace(/_/g, ' '),
+      location: incident.location,
+      status: 'ESCALATED',
+      riskLevel: incident.riskLevel,
+      riskScore: incident.riskScore,
+      timestamp: new Date().toISOString(),
+      actionRequired: `Review escalation — LEVEL ${newLevel}. Reason: ${reason}`,
+    }, 'Incident Escalated').html,
+    officerOnly: false,  // citizen gets public-safe escalation notice; officers get internal
+  })
 }
 
 // ───────────────────────────────────────────────
@@ -507,6 +622,22 @@ export async function resolveIncident(incidentId: string, byUserId?: string) {
   await notifyCitizen(incidentId, 'RESOLUTION', publicMessageFor('RESOLVED'))
   await pushNotification({ type: 'RESOLUTION', message: `Incident ${incident.incidentCode} resolved.`, entityId: incidentId })
   await generateIncidentReport(incidentId)
+  // Multi-channel: INCIDENT_RESOLVED notification (citizen gets public-safe, officers get internal)
+  await dispatchIncidentEventNotification(incidentId, 'INCIDENT_RESOLVED', {
+    title: `Incident Resolved: ${incident.incidentCode}`,
+    message: `${incident.type.replace(/_/g, ' ')} at ${incident.location} has been resolved.`,
+    emailSubject: `RESOURCEFLOW AI – Incident Resolved: ${incident.incidentCode}`,
+    emailHtml: renderIncidentEventEmail({
+      incidentCode: incident.incidentCode,
+      incidentType: incident.type.replace(/_/g, ' '),
+      location: incident.location,
+      status: 'RESOLVED',
+      riskLevel: incident.riskLevel,
+      riskScore: incident.riskScore,
+      timestamp: now.toISOString(),
+    }, 'Incident Resolved').html,
+    officerOnly: false,
+  })
   // Automated resolution email — runs after the report is generated.
   // Idempotent (incident.resolutionEmailSent guard). Failures never roll back resolution.
   await sendResolutionEmails(incidentId, byUserId)
@@ -576,6 +707,23 @@ async function markDelayed(incidentId: string, reason: string) {
   await broadcastStatusUpdate({ incidentId, incidentCode: inc.incidentCode, status: 'DELAYED', publicMessage: publicMessageFor('DELAYED'), previousStatus })
   await notifyCitizen(incidentId, 'WARNING', publicMessageFor('DELAYED'))
   await pushNotification({ type: 'CRITICAL', message: `Delayed: ${reason} (incident ${inc.incidentCode})`, entityId: incidentId })
+  // Multi-channel: RESPONSE_DELAYED is critical → SMS + email + in-app
+  await dispatchIncidentEventNotification(incidentId, 'RESPONSE_DELAYED', {
+    title: `Response Delayed: ${inc.incidentCode}`,
+    message: `${reason}. ${inc.type.replace(/_/g, ' ')} at ${inc.location}. Re-evaluating resources.`,
+    emailSubject: `RESOURCEFLOW AI – Response Delayed: ${inc.incidentCode}`,
+    emailHtml: renderIncidentEventEmail({
+      incidentCode: inc.incidentCode,
+      incidentType: inc.type.replace(/_/g, ' '),
+      location: inc.location,
+      status: 'DELAYED',
+      riskLevel: inc.riskLevel,
+      riskScore: inc.riskScore,
+      timestamp: new Date().toISOString(),
+      actionRequired: `Review delay — ${reason}`,
+    }, 'Response Delayed').html,
+    officerOnly: false,
+  })
   // Auto-escalate at level 2 if delay persists
   await escalateIncident(incidentId, `Auto-escalation: ${reason}`, 2)
 }
