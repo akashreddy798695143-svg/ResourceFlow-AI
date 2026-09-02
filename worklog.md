@@ -237,3 +237,47 @@ Stage Summary:
 - The Gmail credentials are being rejected by Gmail's SMTP server (535-5.7.8 BadCredentials). The user must enable 2-Step Verification on the resourceflowai@gmail.com account and generate a valid App Password at https://myaccount.google.com/apppasswords.
 - When valid credentials are provided, the system will automatically send real emails on every incident resolution — no code changes needed, just update SMTP_PASSWORD in .env and restart the dev server.
 
+
+---
+Task ID: FIX-GMAIL-SMTP-535
+Agent: orchestrator (main)
+Task: Fix Gmail SMTP 535-5.7.8 authentication error
+
+Work Log:
+- Updated .env with SMTP_PASSWORD=vhbltsubfcmympop (no spaces)
+- Rewrote src/lib/services/email-service.ts:
+  * Strips spaces from the App Password before auth (Gmail App Passwords are 16 chars, no spaces)
+  * Uses STARTTLS correctly: nodemailer with `requireTLS: true` on port 587 → connect → EHLO → STARTTLS → EHLO → LOGIN
+  * `getTransporter()` re-reads process.env on every config-hash change (no stale values); `resetEmailTransporter()` forces a full re-read
+  * Backend logging added (never logs the password): "[email] SMTP configuration loaded {host, port, secure, username (masked res***@gmail.com), passwordLength: 16, passwordMasked: true}", "[email] SMTP connection established + authentication successful", "[email] Email sent successfully {messageId, to (masked)}", "[email] SMTP authentication failed: <safe error>"
+  * On auth failure (535/BadCredentials), returns the safe actionable error: "Gmail SMTP authentication failed. Check the Gmail address, 2-Step Verification, and App Password."
+  * Never marks SENT unless Gmail accepts the message (only returns {ok: true, messageId} after sendMail succeeds)
+  * Error sanitization strips passwords/auth tokens from any error message
+- Added POST /api/email/test protected endpoint:
+  * Any authenticated user can call it
+  * Sends a test email to the authenticated user's OWN registered email address (never to other users)
+  * Calls resetEmailTransporter() first so it always uses the current env (not stale)
+  * Returns {success: true, message: "Test email sent successfully"} ONLY after SMTP accepts the message
+  * Never exposes credentials in the response
+  * GET variant returns the current SMTP config status (no credentials)
+- Added GET /api/email/test (status, no creds) and kept GET /api/admin/email-config (admin only)
+- Updated getEmailServiceStatus() to also return masked username (res***@gmail.com)
+
+Verification:
+- /api/admin/email-config → configured: true, host: smtp.gmail.com, port: 587, fromEmail: resourceflowai@gmail.com, secure: false, username: res***@gmail.com — NO password exposed
+- /api/email/test (GET) → configured: true, success: true — NO password exposed
+- /api/email/test (POST as officer) → returns safe error: "Gmail SMTP authentication failed. Check the Gmail address, 2-Step Verification, and App Password." — NO credentials
+- Backend logs confirm: passwordLength: 16 (spaces stripped), passwordMasked: true, STARTTLS handshake completed (got to AUTH step), Gmail rejected credentials
+- Created + resolved incident RF-2026-000012: emails FAILED with safe auth error, incident stays RESOLVED (not rolled back) ✓
+- bun run lint passes clean
+
+Root cause of 535-5.7.8: The code is correct — env vars loaded fresh, spaces stripped (16 chars), STARTTLS negotiated, AUTH attempted. Gmail is rejecting the App Password `vhbltsubfcmympop` itself. This happens when:
+  1. 2-Step Verification is NOT enabled on the resourceflowai@gmail.com account (App Passwords only work after 2SV), OR
+  2. The App Password was revoked/typed incorrectly
+The user must enable 2SV at https://myaccount.google.com/security and generate a fresh App Password at https://myaccount.google.com/apppasswords, then update SMTP_PASSWORD in .env and restart.
+
+Stage Summary:
+- The email system is fully functional and secure: reads env fresh (no stale), strips spaces, uses STARTTLS, logs without exposing credentials, returns safe auth error, never fakes SENT, keeps incident RESOLVED on email failure.
+- The /api/email/test endpoint lets any authenticated user send a test email to their own address to verify SMTP.
+- Only blocker: the Gmail App Password `vhbltsubfcmympop` is being rejected by Gmail (535-5.7.8). Once a valid App Password is provided, real emails will send automatically on every incident resolution.
+
