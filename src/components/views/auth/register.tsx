@@ -134,8 +134,8 @@ export function RegisterView() {
                     <Input id="email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="phone">Phone <span className="text-muted-foreground text-[10px]">(optional)</span></Label>
-                    <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+97798XXXXXXXX" />
+                    <Label htmlFor="phone">Phone <span className="text-muted-foreground text-[10px]">(required)</span></Label>
+                    <Input id="phone" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+97798XXXXXXXX" />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="password">Password</Label>

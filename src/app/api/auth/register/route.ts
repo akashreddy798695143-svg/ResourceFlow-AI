@@ -21,6 +21,8 @@ export async function POST(req: NextRequest) {
     // Input validation
     if (!email || !password || !name) return err('Missing required fields: email, password, name', 422)
     if (password.length < 6) return err('Password must be at least 6 characters', 422)
+    if (!phone) return err('Phone number is required', 422)
+    const phoneStr = String(phone).replace(/[\s()-]/g, '')
     const emailLower = String(email).toLowerCase()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLower)) return err('Invalid email address', 422)
 
