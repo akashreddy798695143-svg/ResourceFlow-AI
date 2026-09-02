@@ -281,3 +281,34 @@ Stage Summary:
 - The /api/email/test endpoint lets any authenticated user send a test email to their own address to verify SMTP.
 - Only blocker: the Gmail App Password `vhbltsubfcmympop` is being rejected by Gmail (535-5.7.8). Once a valid App Password is provided, real emails will send automatically on every incident resolution.
 
+
+---
+Task ID: SMTP-PASSWORD-WORKING
+Agent: orchestrator (main)
+Task: Configure working Gmail App Password + verify real email delivery
+
+Work Log:
+- Updated .env SMTP_PASSWORD=yarxqxpbrfskueln (16 chars, no spaces)
+- Restarted dev server (fresh env load)
+- Tested POST /api/email/test as officer:
+  * Response: {"success": true, "message": "Test email sent successfully", "recipient": "of***@resourceflow.ai", "messageId": "<ef4820f6-8076-18f6-0241-d28c83e926c4@gmail.com>"}
+  * Backend logs: "SMTP configuration loaded {host: smtp.gmail.com, port: 587, ...}", "SMTP connection established + authentication successful", "Email sent successfully"
+- Ran full end-to-end resolution flow with keep-alive pings:
+  * Registered citizen resourceflowai@gmail.com, created incident RF-2026-000013 (Nepal flood)
+  * AI workflow → approve → ACK → START → ARRIVE → RESOLVE
+  * Email workflow ran automatically on resolution
+  * Result: ALL 3 EMAILS SENT
+    - CITIZEN_RESOLUTION_REPORT → r******@gmail.com — SENT at 05:03:39
+    - OFFICER_RESOLUTION_REPORT → a****@resourceflow.ai — SENT at 05:03:43
+    - OFFICER_RESOLUTION_REPORT → o******@resourceflow.ai — SENT at 05:03:47
+  * Citizen track: reportEmail = {sent: True, status: SENT, sentAt: 2026-09-02T05:03:39.648Z}
+  * Backend logs confirm 3× "SMTP connection established + authentication successful" + 3× "Email sent successfully"
+
+Stage Summary:
+- ✅ Gmail SMTP fully working with App Password yarxqxpbrfskueln
+- ✅ Real emails delivered: citizen public report to resourceflowai@gmail.com, officer internal reports to admin@ + officer@resourceflow.ai
+- ✅ Automated on incident resolution (no manual trigger needed)
+- ✅ Idempotent, audit-logged, never faked
+- ✅ Backend logging shows full SMTP lifecycle without exposing credentials
+- The complete workflow now works end-to-end: REPORT → AI → RISK → RESOURCE → APPROVAL → ASSIGNMENT → RESPONSE → RESOLUTION → AUTO REPORT → REAL EMAIL → AUDIT LOG
+
