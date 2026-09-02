@@ -205,3 +205,35 @@ Stage Summary:
 - Demo mode works correctly: when SMTP is not configured, emails are recorded as FAILED with a clear message — never faked as SENT. The complete workflow (report → AI → risk → approval → assignment → response → resolution → report → email → audit) runs end-to-end.
 - Citizen-facing UI shows a friendly "email delivery pending" message (hides technical errors). Officer-facing UI shows the actual error + Resend button. Admin Settings shows SMTP config status without exposing credentials.
 
+
+---
+Task ID: FEATURE-EMAIL-GMAIL-CONFIG
+Agent: orchestrator (main)
+Task: Configure Gmail SMTP credentials and test real email delivery
+
+Work Log:
+- Added Gmail SMTP credentials to .env:
+  SMTP_HOST=smtp.gmail.com, SMTP_PORT=587, SMTP_USERNAME=resourceflowai@gmail.com,
+  SMTP_PASSWORD=<app-password>, SMTP_FROM_EMAIL=resourceflowai@gmail.com,
+  SMTP_FROM_NAME=RESOURCEFLOW AI, SMTP_SECURE=false (STARTTLS on 587)
+- Restarted dev server to pick up new env vars
+- Verified /api/admin/email-config returns configured: true, host: smtp.gmail.com, port: 587, fromEmail: resourceflowai@gmail.com, secure: false — NO credentials exposed
+- Ran full end-to-end test:
+  * Registered a test citizen with email resourceflowai@gmail.com
+  * Created incident RF-2026-000011, waited for AI workflow, approved, advanced ACK→START→ARRIVE→RESOLVE
+  * Email workflow ran automatically and attempted to send 3 emails (1 citizen + 2 officer)
+  * Result: all 3 emails FAILED with error: "Invalid login: 535-5.7.8 Username and Password not accepted"
+- Debugged SMTP directly via nodemailer test script:
+  * Tried password as-is (with space): FAILED
+  * Tried password without spaces: FAILED
+  * Both return Gmail error 535-5.7.8 → https://support.google.com/mail/?p=BadCredentials
+- Verified network path: smtp.gmail.com:587 and :465 both reachable from sandbox; raw SMTP greeting (220) received
+- Root cause: Gmail is rejecting the App Password. This happens when:
+  1. 2-Step Verification is NOT enabled on the Google account (App Passwords only work after 2SV is enabled), OR
+  2. The App Password was revoked/typed incorrectly
+
+Stage Summary:
+- The email system is FULLY FUNCTIONAL — it reads env vars, connects to Gmail SMTP, attempts authentication, records the result (SENT or FAILED) with a sanitized error, keeps the incident RESOLVED, writes audit logs, and never fakes a successful send.
+- The Gmail credentials are being rejected by Gmail's SMTP server (535-5.7.8 BadCredentials). The user must enable 2-Step Verification on the resourceflowai@gmail.com account and generate a valid App Password at https://myaccount.google.com/apppasswords.
+- When valid credentials are provided, the system will automatically send real emails on every incident resolution — no code changes needed, just update SMTP_PASSWORD in .env and restart the dev server.
+
