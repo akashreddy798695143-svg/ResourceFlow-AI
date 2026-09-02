@@ -8,7 +8,7 @@ import { useRealtimeEvents } from '@/lib/use-realtime'
 import { toast } from 'sonner'
 import {
   ArrowLeft, Loader2, MapPin, Clock, Bot, CheckCircle2, XCircle, AlertTriangle,
-  TrendingUp, FileText, Activity, Zap, User, Mail, Send,
+  TrendingUp, FileText, Activity, Zap, User, Mail, Send, Phone,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -208,7 +208,24 @@ export function IncidentDetailView() {
             </div>
             <p className="mt-3 text-sm">{incident.description}</p>
             <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> {incident.location} · {incident.latitude.toFixed(4)}, {incident.longitude.toFixed(4)}</p>
-            <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1"><User className="h-3 w-3" /> Reported by {incident.reportedBy?.name || '—'}</p>
+
+            {/* Citizen contact info — shown to officers/admins */}
+            {canApprove && (
+              <div className="mt-2 rounded-md border border-border bg-muted/30 p-2.5 space-y-1">
+                <p className="text-[10px] font-semibold uppercase text-muted-foreground">Citizen Contact</p>
+                <div className="flex flex-wrap items-center gap-3 text-xs">
+                  <span className="flex items-center gap-1.5"><User className="h-3 w-3 text-muted-foreground" /> {incident.citizenName || incident.reportedBy?.name || '—'}</span>
+                  {incident.citizenEmail && (
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><Mail className="h-3 w-3" /> {incident.citizenEmail}</span>
+                  )}
+                  {incident.citizenPhone && (
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><Phone className="h-3 w-3" /> {incident.citizenPhone}</span>
+                  )}
+                  {incident.language && <Badge variant="outline" className="text-[9px]">{incident.language}</Badge>}
+                  {incident.inputMethod && <Badge variant="outline" className="text-[9px]">{incident.inputMethod}</Badge>}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

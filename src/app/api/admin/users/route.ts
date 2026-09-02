@@ -7,7 +7,8 @@ import type { Role } from '@prisma/client'
 export async function GET(_req: NextRequest) {
   try {
     await requireAuth(['ADMIN'])
-    const users = await db.user.findMany({ orderBy: { createdAt: 'desc' }, select: { id: true, email: true, name: true, role: true, active: true, createdAt: true } })
+    // Admin sees full personal info (phone + email) for all users
+    const users = await db.user.findMany({ orderBy: { createdAt: 'desc' }, select: { id: true, email: true, name: true, role: true, active: true, phone: true, phoneVerified: true, emailVerified: true, createdAt: true } })
     return ok({ users })
   } catch (e) {
     return handleAuthError(e)

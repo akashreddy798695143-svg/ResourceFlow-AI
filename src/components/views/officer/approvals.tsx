@@ -5,7 +5,7 @@ import { useRouter } from '@/lib/use-router'
 import { apiGet, apiPost } from '@/lib/api-client'
 import { useRealtimeEvents } from '@/lib/use-realtime'
 import { toast } from 'sonner'
-import { Loader2, CheckCircle2, XCircle, Inbox } from 'lucide-react'
+import { Loader2, CheckCircle2, XCircle, Inbox, User, Mail, Phone } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -82,6 +82,36 @@ export function ApprovalsView() {
                     <Badge variant="secondary" className="text-[10px]">{a.incident?.type.replace(/_/g, ' ')}</Badge>
                     {a.incident?.riskLevel && <RiskBadge level={a.incident.riskLevel as RiskLevel} score={a.incident.riskScore} />}
                     <span className="text-xs text-muted-foreground ml-auto">{a.incident?.location}</span>
+                  </div>
+
+                  {/* Citizen description + language */}
+                  <p className="mt-2 text-sm">{a.incident?.description || a.incident?.originalDescription}</p>
+                  {a.incident?.language && (
+                    <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <Badge variant="outline" className="text-[9px]">{a.incident.language}</Badge>
+                      {a.incident.inputMethod && <Badge variant="outline" className="text-[9px]">{a.incident.inputMethod}</Badge>}
+                    </div>
+                  )}
+
+                  {/* Citizen contact info — shown to officers while approving */}
+                  <div className="mt-2 rounded-md border border-border bg-muted/30 p-2.5 space-y-1">
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground">Citizen Contact (for follow-up)</p>
+                    <div className="flex items-center gap-2 text-xs">
+                      <User className="h-3 w-3 text-muted-foreground" />
+                      <span className="font-medium">{a.incident?.citizenName || '—'}</span>
+                    </div>
+                    {a.incident?.citizenEmail && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Mail className="h-3 w-3" />
+                        <span>{a.incident.citizenEmail}</span>
+                      </div>
+                    )}
+                    {a.incident?.citizenPhone && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Phone className="h-3 w-3" />
+                        <span>{a.incident.citizenPhone}</span>
+                      </div>
+                    )}
                   </div>
 
                   {recommended ? (

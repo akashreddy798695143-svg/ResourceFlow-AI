@@ -7,7 +7,7 @@ import { apiPost, apiGet } from '@/lib/api-client'
 import { toast } from 'sonner'
 import {
   MapPin, Loader2, Send, Mic, Square, Navigation, Crosshair, Edit3,
-  RadioTower, MicOff, RefreshCw, CheckCircle2, AlertTriangle, Languages,
+  RadioTower, MicOff, RefreshCw, CheckCircle2, AlertTriangle, Languages, Upload, X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -61,6 +61,9 @@ export function ReportIncidentView() {
   const [mapPicker, setMapPicker] = useState(false)
   const [manualLat, setManualLat] = useState('')
   const [manualLng, setManualLng] = useState('')
+  // Optional photo upload (image metadata only — the backend validates type + size)
+  const [imageMeta, setImageMeta] = useState<{ filename?: string; size?: number; contentType?: string } | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
   // Speech recognition state
   const [listening, setListening] = useState(false)
@@ -186,6 +189,31 @@ export function ReportIncidentView() {
   }
 
   // ─── Submit ────────────────────────────────────────────────────────────
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!allowed.includes(file.type)) {
+      toast.error('Only JPEG, PNG, WebP, GIF allowed')
+      e.target.value = ''
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image too large (max 10MB)')
+      e.target.value = ''
+      return
+    }
+    setImageMeta({ filename: file.name, size: file.size, contentType: file.type })
+    const reader = new FileReader()
+    reader.onload = () => setImagePreview(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  const clearImage = () => {
+    setImageMeta(null)
+    setImagePreview(null)
+  }
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (description.trim().length < 5) return toast.error('Describe the emergency in at least 5 characters')
@@ -205,6 +233,7 @@ export function ReportIncidentView() {
         inputMethod,
         locationAccuracy: gps.accuracy,
         locationTimestamp: gps.timestamp,
+        imageMeta,  // optional photo metadata
       })
       toast.success(`Report received: ${res.incidentCode}`, {
         description: 'AI analysis started. Track status with your incident code.',
@@ -380,6 +409,31 @@ export function ReportIncidentView() {
                 </div>
               </div>
             )}
+
+            {/* Optional photo upload */}
+            <div className="space-y-1.5">
+              <Label htmlFor="photo" className="flex items-center gap-1.5"><Upload className="h-3.5 w-3.5" /> Photo <span className="text-muted-foreground text-[10px]">(optional)</span></Label>
+              <div className="flex items-center gap-3">
+                <label htmlFor="photo" className="cursor-pointer">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-border hover:bg-accent/40 transition text-sm">
+                    <Upload className="h-4 w-4" />
+                    {imageMeta ? imageMeta.filename : 'Choose photo'}
+                  </div>
+                  <input id="photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onFile} className="hidden" />
+                </label>
+                {imageMeta && (
+                  <>
+                    <span className="text-xs text-muted-foreground">{(imageMeta.size! / 1024).toFixed(0)} KB · {imageMeta.contentType}</span>
+                    <Button type="button" size="sm" variant="ghost" className="h-7 px-2" onClick={clearImage}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
+                )}
+              </div>
+              {imagePreview && (
+                <img src={imagePreview} alt="preview" className="mt-2 max-h-40 rounded-md border border-border" />
+              )}
+            </div>
 
             {/* Citizen identity — auto-attached (read-only, for transparency) */}
             {user && (

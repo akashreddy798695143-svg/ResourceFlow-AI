@@ -12,7 +12,17 @@ export async function GET(req: NextRequest) {
     const approvals = await db.approval.findMany({
       where: { decision: decision as any },
       orderBy: { createdAt: 'desc' },
-      include: { incident: { select: { incidentCode: true, type: true, location: true, riskLevel: true, riskScore: true } } },
+      include: {
+        incident: {
+          select: {
+            incidentCode: true, type: true, location: true, riskLevel: true, riskScore: true,
+            description: true, language: true, inputMethod: true, originalDescription: true,
+            // Citizen contact info — shown to officers/admins while approving
+            citizenName: true, citizenPhone: true, citizenEmail: true,
+            reportedById: true,
+          },
+        },
+      },
     })
     return ok({ approvals })
   } catch (e) {

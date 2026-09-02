@@ -35,6 +35,7 @@ export function RegisterView() {
   const { navigate } = useRouter()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('CITIZEN')
   const [loading, setLoading] = useState(false)
@@ -49,7 +50,7 @@ export function RegisterView() {
     if (password.length < 6) return toast.error('Password must be at least 6 characters')
     setLoading(true)
     try {
-      const res = await apiPost<RegisterResponse>('/api/auth/register', { name, email, password, role })
+      const res = await apiPost<RegisterResponse>('/api/auth/register', { name, email, password, role, phone: phone || undefined })
       setRegResult(res)
       setStage('verify')
       if (res.emailOtpSent) {
@@ -131,6 +132,10 @@ export function RegisterView() {
                   <div className="space-y-1.5">
                     <Label htmlFor="email">Email</Label>
                     <Input id="email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="phone">Phone <span className="text-muted-foreground text-[10px]">(optional)</span></Label>
+                    <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+97798XXXXXXXX" />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="password">Password</Label>

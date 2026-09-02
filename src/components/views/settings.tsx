@@ -128,11 +128,20 @@ export function SettingsView() {
               <div className="py-8 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></div>
             ) : (
               <div className="divide-y divide-border max-h-[60vh] overflow-y-auto rf-scroll">
-                {users.map((u) => (
+                {users.map((u: any) => (
                   <div key={u.id} className="p-3 flex items-center gap-3 hover:bg-accent/30">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{u.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                      <p className="text-xs text-muted-foreground truncate flex items-center gap-1.5">
+                        <Mail className="h-3 w-3" /> {u.email}
+                        {u.emailVerified && <CheckCircle2 className="h-3 w-3 text-sev-LOW" />}
+                      </p>
+                      {u.phone && (
+                        <p className="text-xs text-muted-foreground truncate flex items-center gap-1.5 mt-0.5">
+                          <Smartphone className="h-3 w-3" /> {u.phone}
+                          {u.phoneVerified && <CheckCircle2 className="h-3 w-3 text-sev-LOW" />}
+                        </p>
+                      )}
                     </div>
                     {editing === u.id ? (
                       <div className="flex items-center gap-2">

@@ -27,6 +27,9 @@ export interface User {
   name: string
   role: Role
   active?: boolean
+  phone?: string | null
+  phoneVerified?: boolean
+  emailVerified?: boolean
   createdAt?: string
 }
 
@@ -41,6 +44,18 @@ export interface Incident {
   imageMeta: string | null
   status: IncidentStatus
   duplicateFlag: boolean
+  // Citizen identity (auto-derived from session)
+  citizenName?: string | null
+  citizenPhone?: string | null
+  citizenEmail?: string | null
+  // Original input + language
+  originalDescription?: string | null
+  transcription?: string | null
+  language?: string | null
+  inputMethod?: string | null
+  // Location capture metadata
+  locationAccuracy?: number | null
+  locationTimestamp?: string | null
   aiSeverity: string | null
   aiPeopleAffected: number | null
   aiUrgentNeeds: string | null
