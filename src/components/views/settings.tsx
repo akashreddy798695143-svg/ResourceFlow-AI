@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/lib/use-auth'
 import { apiGet, apiPatch, apiPost } from '@/lib/api-client'
 import { toast } from 'sonner'
-import { Loader2, Settings, Users, Database, Shield, UserCog } from 'lucide-react'
+import { Loader2, Settings, Users, Database, Shield, UserCog, Mail, CheckCircle2, XCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -143,6 +143,16 @@ export function SettingsView() {
           </CardContent>
         </Card>
 
+        {/* Email configuration */}
+        <Card>
+          <CardHeader className="pb-2 border-b border-border">
+            <CardTitle className="text-sm flex items-center gap-2"><Mail className="h-4 w-4 text-primary" /> Email Service (SMTP)</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <EmailConfigCard />
+          </CardContent>
+        </Card>
+
         {/* System info */}
         <Card>
           <CardHeader className="pb-2 border-b border-border">
@@ -157,6 +167,56 @@ export function SettingsView() {
             <div className="flex justify-between"><span className="text-muted-foreground">Version</span><span>1.0 · Hackathon</span></div>
           </CardContent>
         </Card>
+      </div>
+    </div>
+  )
+}
+
+function EmailConfigCard() {
+  const [config, setConfig] = useState<{ configured: boolean; host: string | null; port: number | null; fromEmail: string | null; secure: boolean } | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    try {
+      const c = await apiGet<{ configured: boolean; host: string | null; port: number | null; fromEmail: string | null; secure: boolean }>('/api/admin/email-config')
+      setConfig(c)
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  if (loading) return <div className="py-4 text-center"><Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" /></div>
+  if (!config) return <p className="text-xs text-muted-foreground">Unable to load email configuration.</p>
+
+  return (
+    <div className="space-y-3">
+      <div className={`rounded-md border p-3 flex items-start gap-2 ${config.configured ? 'border-sev-LOW bg-sev-LOW/20' : 'border-sev-MEDIUM bg-sev-MEDIUM/20'}`}>
+        {config.configured ? (
+          <CheckCircle2 className="h-4 w-4 text-sev-LOW mt-0.5 shrink-0" />
+        ) : (
+          <XCircle className="h-4 w-4 text-sev-MEDIUM mt-0.5 shrink-0" />
+        )}
+        <div className="text-xs">
+          <p className={config.configured ? 'text-sev-LOW' : 'text-sev-MEDIUM'}>
+            {config.configured ? 'SMTP configured — emails will be sent automatically.' : 'SMTP not configured — resolution emails are recorded as FAILED (demo mode).'}
+          </p>
+          {!config.configured && (
+            <p className="text-muted-foreground mt-1">
+              Set <code className="font-mono text-[10px]">SMTP_HOST</code>, <code className="font-mono text-[10px]">SMTP_PORT</code>, <code className="font-mono text-[10px]">SMTP_FROM_EMAIL</code>, <code className="font-mono text-[10px]">SMTP_USERNAME</code>, <code className="font-mono text-[10px]">SMTP_PASSWORD</code> in the backend environment to enable real email delivery.
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="text-xs space-y-1.5 font-mono">
+        <div className="flex justify-between"><span className="text-muted-foreground">Host</span><span>{config.host || '—'}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Port</span><span>{config.port || '—'}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">From</span><span>{config.fromEmail || '—'}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">TLS/Secure</span><span>{config.secure ? 'yes' : 'no'}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Credentials</span><span className="text-muted-foreground/60">never exposed</span></div>
       </div>
     </div>
   )

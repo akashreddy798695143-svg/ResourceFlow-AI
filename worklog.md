@@ -160,3 +160,48 @@ Stage Summary:
 - Citizen-facing data is appropriately abstracted (no officer-only AI/risk/resource intelligence exposed) — only the 7-stage timeline + public message.
 - Also fixed a pre-existing resolveIncident assignment-status bug that caused false resource conflicts during reassignment.
 
+
+---
+Task ID: FEATURE-EMAIL-REPORT
+Agent: orchestrator (main)
+Task: Add secure automated email incident report system
+
+Work Log:
+- Schema: Added `resolutionEmailSent` (Boolean) + `resolutionEmailSentAt` (DateTime) fields on Incident; new `EmailNotification` model (id, incidentId, recipientEmail, recipientUserId, emailType [CITIZEN_RESOLUTION_REPORT|OFFICER_RESOLUTION_REPORT], subject, status [PENDING|SENT|FAILED], sentAt, errorMessage, timestamps) + EmailType/EmailStatus enums. Pushed via `bun run db:push`.
+- Installed nodemailer + @types/nodemailer
+- Built `src/lib/services/email-service.ts`: SMTP via nodemailer with env vars (SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_EMAIL, SMTP_FROM_NAME, SMTP_SECURE). Demo-mode fallback: if SMTP not configured, returns `{ ok: false, unavailable: true, error: 'Email service unavailable — SMTP not configured. Report generated successfully.' }` — NEVER fakes success. Errors are sanitized (passwords/auth tokens stripped). Includes `getEmailServiceStatus()` (no credentials) and `maskEmail()` (h***@gmail.com).
+- Built `src/lib/services/email-templates.ts`: two HTML templates — `renderCitizenReportEmail` (public-safe: incident ID, type, location, status badge, response timeline, response time, resolution time, branding) + `renderOfficerReportEmail` (internal: AI analysis, risk score/level/reasons, cluster info, recommended+approved resources, assignment history, response timeline, delays/reassignments/escalations/resource failures). Professional dark+amber branding with footer disclaimer.
+- Built `src/lib/workflows/email-workflow.ts`: `sendResolutionEmails(incidentId)` orchestrates citizen + officer emails on resolution. Idempotent via `incident.resolutionEmailSent` flag. Creates PENDING EmailNotification row → sends via email-service → updates to SENT/FAILED → records INCIDENT events (EMAIL_REPORT_GENERATED, EMAIL_REPORT_SENT, EMAIL_REPORT_FAILED) + audit logs. `retryResolutionEmail()` for the retry endpoint. Never throws into the resolveIncident path (failures recorded, not raised). Incident resolution never rolls back on email failure.
+- Integrated into `resolveIncident()` in `incident-workflow.ts`: after `generateIncidentReport()`, calls `sendResolutionEmails()`. The email workflow runs automatically — no manual trigger required.
+- API routes (all RBAC enforced):
+  * `GET /api/incidents/[id]/email-status` — citizen sees ONLY their own emails (unmasked, their own address); officer sees all emails with masked recipients; admin sees full recipients; responder denied
+  * `POST /api/incidents/[id]/send-report` — officer/admin manual trigger (idempotent — returns "already sent" if flag is true)
+  * `POST /api/incidents/[id]/retry-report-email` — officer/admin retry a FAILED email by emailNotificationId
+  * `GET /api/admin/email-config` — admin only, returns {configured, host, port, fromEmail, secure} — NO credentials
+- Updated `GET /api/incidents/track` to return `reportEmail: {sent, status, sentAt} | null` for citizens (only their own CITIZEN_RESOLUTION_REPORT status)
+- Frontend updates:
+  * Citizen Track view: new "Final Report Email" section showing "Final report sent to your registered email." (SENT), "Report generated — email delivery pending. The team will send your report shortly." (FAILED — citizen-friendly, hides technical error), or "Sending final report to your email…" (PENDING). Added Mail icon import.
+  * Officer Incident Detail view: new "Report Email" card showing each email with CITIZEN/OFFICER badge, SENT/FAILED/PENDING badge, masked recipient email, sent timestamp, error message (for FAILED), and "Resend Report" button that calls the retry endpoint. Loads email-status on RESOLVED incidents + refreshes on EMAIL_* realtime events.
+  * Admin Settings view: new "Email Service (SMTP)" card showing configured status (green check or yellow warning), host/port/from/secure, "Credentials: never exposed", and env var instructions when not configured.
+- Created `.env.example` with SMTP env var documentation
+
+End-to-end verification (curl + Agent Browser + VLM):
+1. ✅ Incident resolved → resolutionEmailSent=true, resolutionEmailSentAt set
+2. ✅ Citizen report email created (CITIZEN_RESOLUTION_REPORT) → status FAILED (demo mode, SMTP not configured)
+3. ✅ Officer internal report emails created (OFFICER_RESOLUTION_REPORT) → status FAILED (demo mode)
+4. ✅ Error message: "Email service unavailable — SMTP not configured. Report generated successfully." (never faked as SENT)
+5. ✅ Audit logs: EMAIL_REPORT_GENERATED, EMAIL_REPORT_SENT (for earlier resolved), EMAIL_REPORT_FAILED, EMAIL_REPORT_RETRIED all recorded
+6. ✅ Citizen track shows reportEmail with FAILED status + citizen-friendly message (hides technical error)
+7. ✅ Officer Incident Detail shows 3 email entries (1 citizen + 2 officer) with FAILED badges, masked recipients, error messages, Resend buttons
+8. ✅ Retry endpoint returns the FAILED error in demo mode (doesn't fake success)
+9. ✅ Admin email-config shows configured: false, no credentials exposed
+10. ✅ Idempotency: re-send-report returns "already sent" / "must be resolved" — no duplicate emails created
+11. ✅ RBAC: citizen sees only own emails (unmasked own address); officer sees all (masked); admin sees all (unmasked); responder denied
+12. ✅ Security: SMTP credentials never exposed in any API response; recipient emails masked for non-admins; citizen never sees officer-only internal report data
+13. ✅ `bun run lint` passes clean
+
+Stage Summary:
+- Complete automated email incident report system with real backend integration, MongoDB persistence (EmailNotification model), secure SMTP configuration (env vars, no hardcoded credentials), role-based access control, automatic triggering on resolution, idempotency guard, failure handling (FAILED status, no rollback), retry support, and full audit logging.
+- Demo mode works correctly: when SMTP is not configured, emails are recorded as FAILED with a clear message — never faked as SENT. The complete workflow (report → AI → risk → approval → assignment → response → resolution → report → email → audit) runs end-to-end.
+- Citizen-facing UI shows a friendly "email delivery pending" message (hides technical errors). Officer-facing UI shows the actual error + Resend button. Admin Settings shows SMTP config status without exposing credentials.
+

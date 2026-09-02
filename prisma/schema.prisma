@@ -115,6 +115,10 @@ model Incident {
   resolvedAt        DateTime?
   escalationLevel   Int      @default(0) // 0=none,1=responder,2=officer,3=supervisor
 
+  // Resolution email tracking (idempotency guard — never send duplicate resolution emails)
+  resolutionEmailSent    Boolean   @default(false)
+  resolutionEmailSentAt  DateTime?
+
   reportedById String
   reportedBy   User   @relation(fields: [reportedById], references: [id])
 
@@ -123,6 +127,7 @@ model Incident {
   assignments  ResourceAssignment[]
   recommendations AIRecommendation[]
   report       GeneratedReport?
+  emailNotifications EmailNotification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -303,6 +308,39 @@ model GeneratedReport {
   createdAt  DateTime @default(now())
 
   incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+}
+
+// ───────────────────────────────────────────────
+// EMAIL NOTIFICATIONS — automated resolution report emails
+// ───────────────────────────────────────────────
+enum EmailType {
+  CITIZEN_RESOLUTION_REPORT  // public-safe, sent to the reporting citizen
+  OFFICER_RESOLUTION_REPORT   // internal, sent to authorized officers
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model EmailNotification {
+  id               String      @id @default(cuid())
+  incidentId       String
+  incident         Incident    @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  recipientEmail   String      // the address the email was sent to (NOT exposed to other users)
+  recipientUserId  String?     // the user the email belongs to (null for officer role-based sends)
+  emailType        EmailType
+  subject          String
+  status           EmailStatus @default(PENDING)
+  sentAt           DateTime?
+  errorMessage     String?     // safe error string (never contains SMTP credentials)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([incidentId])
+  @@index([recipientUserId])
+  @@index([status])
 }
 
 // ───────────────────────────────────────────────

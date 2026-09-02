@@ -24,6 +24,12 @@ export async function GET(req: NextRequest) {
     const currentStage = activeStage?.label || deriveStage(incident.status)
     const publicMessage = activeStage?.message || publicMessageFor(incident.status)
 
+    // Email status — only expose the citizen's OWN email status (never other users' emails)
+    const emailStatus = await db.emailNotification.findFirst({
+      where: { incidentId: incident.id, emailType: 'CITIZEN_RESOLUTION_REPORT' },
+      select: { status: true, sentAt: true },
+    })
+
     return ok({
       incidentCode: incident.incidentCode,
       type: incident.type,
@@ -36,6 +42,13 @@ export async function GET(req: NextRequest) {
       publicMessage,
       stages,
       lastUpdate: incident.updatedAt,
+      reportEmail: incident.resolutionEmailSent
+        ? {
+            sent: true,
+            status: emailStatus?.status || 'PENDING',
+            sentAt: emailStatus?.sentAt || incident.resolutionEmailSentAt,
+          }
+        : null,
       response: {
         assignedAt: incident.assignedAt,
         acknowledgedAt: incident.acknowledgedAt,

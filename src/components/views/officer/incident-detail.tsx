@@ -8,7 +8,7 @@ import { useRealtimeEvents } from '@/lib/use-realtime'
 import { toast } from 'sonner'
 import {
   ArrowLeft, Loader2, MapPin, Clock, Bot, CheckCircle2, XCircle, AlertTriangle,
-  TrendingUp, FileText, Activity, Zap, User,
+  TrendingUp, FileText, Activity, Zap, User, Mail, Send,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,16 +21,35 @@ import {
 import { CommandMap } from '@/components/shared/command-map'
 import type { Incident, Resource, Approval, DashboardEvent, IncidentStatus, RiskLevel, ResourceStatus } from '@/lib/types'
 
+interface EmailStatusEntry {
+  id: string
+  emailType: string
+  recipientEmail: string  // already masked by backend for officers
+  subject: string
+  status: string
+  sentAt: string | null
+  errorMessage: string | null
+  createdAt: string
+}
+interface EmailStatus {
+  incidentCode: string
+  resolutionEmailSent: boolean
+  resolutionEmailSentAt: string | null
+  emails: EmailStatusEntry[]
+}
+
 export function IncidentDetailView() {
   const { path, navigate } = useRouter()
   const { user } = useAuth()
   const id = path.split('/')[2] || ''
   const [incident, setIncident] = useState<Incident | null>(null)
   const [resources, setResources] = useState<Resource[]>([])
+  const [emailStatus, setEmailStatus] = useState<EmailStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [approvalReason, setApprovalReason] = useState('')
   const [escalateReason, setEscalateReason] = useState('')
+  const [retryingId, setRetryingId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -41,6 +60,15 @@ export function IncidentDetailView() {
       ])
       setIncident(inc.incident)
       setResources(res.resources)
+      // Load email status (officer/admin only; backend enforces RBAC)
+      if (inc.incident.status === 'RESOLVED' || inc.incident.resolutionEmailSent) {
+        try {
+          const es = await apiGet<EmailStatus>(`/api/incidents/${id}/email-status`)
+          setEmailStatus(es)
+        } catch {
+          // citizen or responder — no access
+        }
+      }
     } catch (e: any) {
       toast.error(e.message)
     } finally {
@@ -50,7 +78,7 @@ export function IncidentDetailView() {
 
   useEffect(() => { load() }, [load])
   useRealtimeEvents(useCallback((e: DashboardEvent) => {
-    if (e.incidentId === id) load()
+    if (e.incidentId === id || e.type.startsWith('EMAIL') || e.type === 'INCIDENT_RESOLVED') load()
   }, [id, load]))
 
   if (loading) return <div className="flex items-center justify-center py-12 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading incident…</div>
@@ -122,6 +150,35 @@ export function IncidentDetailView() {
     try {
       await apiPut(`/api/incidents/${id}/reassess`, { reason: 'Officer-triggered re-evaluation' })
       toast.success('Re-evaluation triggered')
+      load()
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const retryEmail = async (emailNotificationId: string) => {
+    setRetryingId(emailNotificationId)
+    try {
+      await apiPost(`/api/incidents/${id}/retry-report-email`, { emailNotificationId })
+      toast.success('Email retry: sent successfully')
+      load()
+    } catch (e: any) {
+      // The retry endpoint returns 422 with an error message when SMTP is unavailable
+      toast.error(e.message || 'Email retry failed')
+      load()
+    } finally {
+      setRetryingId(null)
+    }
+  }
+
+  const sendReport = async () => {
+    setActionLoading(true)
+    try {
+      const res = await apiPost<{ ok: boolean; alreadySent?: boolean; message?: string }>(`/api/incidents/${id}/send-report`)
+      if (res.alreadySent) toast.info(res.message)
+      else toast.success('Report email workflow triggered')
       load()
     } catch (e: any) {
       toast.error(e.message)
@@ -435,6 +492,74 @@ export function IncidentDetailView() {
                   </div>
                 )
               })}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Report Email Status — officer/admin only */}
+        {canApprove && (incident.status === 'RESOLVED' || emailStatus) && (
+          <Card>
+            <CardHeader className="pb-2 border-b border-border">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Mail className="h-4 w-4 text-primary" /> Report Email
+                {incident.resolutionEmailSent && (
+                  <Badge variant="outline" className="text-[9px] text-sev-LOW border-sev-LOW">attempted</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 space-y-3">
+              {!emailStatus ? (
+                <p className="text-xs text-muted-foreground">Loading email status…</p>
+              ) : emailStatus.emails.length === 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">No report email sent yet.</p>
+                  {incident.status === 'RESOLVED' && !incident.resolutionEmailSent && (
+                    <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={sendReport} disabled={actionLoading}>
+                      <Send className="h-3.5 w-3.5" /> Send Report Email
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {emailStatus.emails.map((e) => (
+                    <div key={e.id} className="rounded-md border border-border bg-card/40 p-2.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="secondary" className="text-[9px]">
+                          {e.emailType === 'CITIZEN_RESOLUTION_REPORT' ? 'CITIZEN' : 'OFFICER'}
+                        </Badge>
+                        {e.status === 'SENT' ? (
+                          <Badge variant="outline" className="text-[9px] text-sev-LOW border-sev-LOW">✓ SENT</Badge>
+                        ) : e.status === 'FAILED' ? (
+                          <Badge variant="outline" className="text-[9px] text-sev-CRITICAL border-sev-CRITICAL">✗ FAILED</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[9px] text-sev-MEDIUM border-sev-MEDIUM">○ PENDING</Badge>
+                        )}
+                        <span className="text-[10px] text-muted-foreground font-mono ml-auto">{e.recipientEmail}</span>
+                      </div>
+                      {e.sentAt && (
+                        <p className="mt-1 text-[10px] text-muted-foreground font-mono">
+                          Sent: {new Date(e.sentAt).toLocaleString()}
+                        </p>
+                      )}
+                      {e.status === 'FAILED' && e.errorMessage && (
+                        <p className="mt-1 text-[10px] text-sev-CRITICAL/80">{e.errorMessage}</p>
+                      )}
+                      {e.status === 'FAILED' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-2 w-full gap-1.5 text-xs h-7"
+                          onClick={() => retryEmail(e.id)}
+                          disabled={retryingId === e.id}
+                        >
+                          {retryingId === e.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                          {retryingId === e.id ? 'Retrying…' : 'Resend Report'}
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

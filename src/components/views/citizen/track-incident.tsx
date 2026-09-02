@@ -6,7 +6,7 @@ import { apiGet } from '@/lib/api-client'
 import { useRealtimeEvents } from '@/lib/use-realtime'
 import { toast } from 'sonner'
 import {
-  Search, Loader2, MapPin, Clock, CheckCircle2, RefreshCw, Circle, AlertTriangle,
+  Search, Loader2, MapPin, Clock, CheckCircle2, RefreshCw, Circle, AlertTriangle, Mail,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -36,6 +36,11 @@ interface TrackResult {
   publicMessage: string
   stages: Stage[]
   lastUpdate: string
+  reportEmail: {
+    sent: boolean
+    status: string  // PENDING | SENT | FAILED
+    sentAt: string | null
+  } | null
   response: {
     assignedAt: string | null
     acknowledgedAt: string | null
@@ -268,6 +273,37 @@ export function TrackIncidentView() {
             {result.status === 'RESOLVED' && (
               <div className="rounded-md border border-sev-LOW bg-sev-LOW/20 p-3 flex items-center gap-2 text-sm text-sev-LOW">
                 <CheckCircle2 className="h-4 w-4" /> This incident has been resolved.
+              </div>
+            )}
+
+            {/* Final report email status — citizen-facing */}
+            {result.status === 'RESOLVED' && result.reportEmail && (
+              <div className="rounded-md border border-border bg-card/40 p-3 space-y-1.5">
+                <p className="text-xs font-semibold flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5 text-primary" />
+                  Final Report Email
+                </p>
+                {result.reportEmail.status === 'SENT' ? (
+                  <p className="text-xs text-sev-LOW flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Final report sent to your registered email.
+                    {result.reportEmail.sentAt && (
+                      <span className="text-muted-foreground font-mono ml-1">
+                        {new Date(result.reportEmail.sentAt).toLocaleString()}
+                      </span>
+                    )}
+                  </p>
+                ) : result.reportEmail.status === 'FAILED' ? (
+                  <p className="text-xs text-sev-MEDIUM flex items-center gap-1.5">
+                    <Clock className="h-3 w-3" />
+                    Report generated — email delivery pending. The team will send your report shortly.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Sending final report to your email…
+                  </p>
+                )}
               </div>
             )}
           </CardContent>

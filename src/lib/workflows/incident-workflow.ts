@@ -11,6 +11,7 @@ import { calculateRisk } from '@/lib/services/risk-service'
 import { getWeatherCached } from '@/lib/services/weather-service'
 import { clusterIncident } from '@/lib/services/clustering-service'
 import { pushNotification } from '@/lib/notifications'
+import { sendResolutionEmails } from '@/lib/workflows/email-workflow'
 import type { NotificationType } from '@prisma/client'
 
 // Helper: create a notification targeted to the citizen who reported the incident.
@@ -506,6 +507,9 @@ export async function resolveIncident(incidentId: string, byUserId?: string) {
   await notifyCitizen(incidentId, 'RESOLUTION', publicMessageFor('RESOLVED'))
   await pushNotification({ type: 'RESOLUTION', message: `Incident ${incident.incidentCode} resolved.`, entityId: incidentId })
   await generateIncidentReport(incidentId)
+  // Automated resolution email — runs after the report is generated.
+  // Idempotent (incident.resolutionEmailSent guard). Failures never roll back resolution.
+  await sendResolutionEmails(incidentId, byUserId)
 }
 
 // Generate an automatic incident report after resolution
