@@ -5,16 +5,14 @@ import { ok, err, parseBody } from '@/lib/api'
 import { recordAudit } from '@/lib/events'
 import { generateOtp } from '@/lib/services/otp-service'
 import { sendEmail } from '@/lib/services/email-service'
-import { sendSms, isValidPhone } from '@/lib/services/sms-service'
 import type { Role } from '@prisma/client'
 
 const ALLOWED_ROLES: Role[] = ['CITIZEN', 'RESPONDER', 'DISASTER_OFFICER', 'ADMIN']
 
 // POST /api/auth/register
-// Stage 1 of dual-OTP registration: validate input, create user as INACTIVE,
-// generate TWO separate 6-digit OTPs (one for phone via SMS, one for email),
-// send them through their respective channels. The account is NOT activated
-// until /api/auth/verify-otp verifies BOTH.
+// Email-only OTP registration: validate input, create user as INACTIVE,
+// generate a 6-digit OTP, send it to the user's email. The account is NOT
+// activated until /api/auth/verify-otp verifies the email OTP.
 export async function POST(req: NextRequest) {
   try {
     const body = parseBody(await req.json())
@@ -23,24 +21,19 @@ export async function POST(req: NextRequest) {
     // Input validation
     if (!email || !password || !name) return err('Missing required fields: email, password, name', 422)
     if (password.length < 6) return err('Password must be at least 6 characters', 422)
-    if (!phone) return err('Phone number is required for OTP verification', 422)
-    const phoneStr = String(phone).replace(/[\s()-]/g, '')
-    if (!isValidPhone(phoneStr)) return err('Invalid phone number. Use E.164 format (e.g. +97798XXXXXXXX)', 422)
     const emailLower = String(email).toLowerCase()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLower)) return err('Invalid email address', 422)
 
     const roleNorm = (String(role || 'CITIZEN').toUpperCase()) as Role
     if (!ALLOWED_ROLES.includes(roleNorm)) return err('Invalid role', 422)
 
-    const existing = await db.user.findFirst({
-      where: { OR: [{ email: emailLower }, { phone: phoneStr }] },
-    })
-    if (existing) {
-      if (existing.email === emailLower) return err('Email already registered', 409)
-      return err('Phone number already registered', 409)
-    }
+    const existing = await db.user.findUnique({ where: { email: emailLower } })
+    if (existing) return err('Email already registered', 409)
 
-    // Create the user as INACTIVE (active=false) until BOTH OTPs are verified
+    // Phone is optional now — store if provided but not required for OTP
+    const phoneStr = phone ? String(phone).replace(/[\s()-]/g, '') : null
+
+    // Create the user as INACTIVE (active=false) until the email OTP is verified
     const user = await db.user.create({
       data: {
         email: emailLower,
@@ -54,28 +47,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // ─── Generate + send PHONE OTP (SMS) ─────────────────────────────────
-    const phoneOtpResult = await generateOtp({
-      identifier: phoneStr,
-      channel: 'SMS',
-      purpose: 'REGISTRATION',
-      userId: user.id,
-    })
-    let phoneOtpSent = false
-    let phoneOtpError: string | undefined
-    if (phoneOtpResult.ok && phoneOtpResult.code) {
-      const smsText = `RESOURCEFLOW AI: Your phone verification code is ${phoneOtpResult.code}. It expires in 5 minutes. Do not share this code.`
-      const smsRes = await sendSms(phoneStr, smsText)
-      phoneOtpSent = smsRes.ok
-      phoneOtpError = smsRes.error
-      // If SMS fails, we DO NOT fake success. The user can retry via /resend-otp.
-      // The OTP record exists in the DB so the user can still verify it (the SMS
-      // may arrive late, or the user can request a resend).
-    } else {
-      phoneOtpError = phoneOtpResult.error
-    }
-
-    // ─── Generate + send EMAIL OTP (email) ──────────────────────────────
+    // ─── Generate + send EMAIL OTP ──────────────────────────────────────
     const emailOtpResult = await generateOtp({
       identifier: emailLower,
       channel: 'EMAIL',
@@ -98,8 +70,8 @@ export async function POST(req: NextRequest) {
       role: user.role,
       action: 'REGISTER_OTP_SENT',
       entityId: user.id,
-      newState: 'PENDING_DUAL_VERIFICATION',
-      reason: `Phone OTP ${phoneOtpSent ? 'sent' : 'FAILED'}, Email OTP ${emailOtpSent ? 'sent' : 'FAILED'}`,
+      newState: 'PENDING_EMAIL_VERIFICATION',
+      reason: `Email OTP ${emailOtpSent ? 'sent' : 'FAILED'}`,
     })
 
     return ok({
@@ -107,15 +79,11 @@ export async function POST(req: NextRequest) {
       email: user.email,
       name: user.name,
       role: user.role,
-      phone: phoneStr.slice(0, 4) + '***' + phoneStr.slice(-2),
       otpRequired: true,
-      dualOtp: true,  // both phone + email must be verified
-      phoneOtpSent,
       emailOtpSent,
-      phoneOtpError: phoneOtpSent ? undefined : (phoneOtpError || 'Unable to send OTP via SMS'),
       emailOtpError: emailOtpSent ? undefined : (emailOtpError || 'Unable to send OTP via email'),
-      otpExpiresAt: phoneOtpResult.expiresAt,
-      message: 'Verification codes sent to your phone (SMS) and email. Verify both to activate your account.',
+      otpExpiresAt: emailOtpResult.expiresAt,
+      message: 'Verification code sent to your email. Verify to activate your account.',
     }, 201)
   } catch (e) {
     return handleAuthError(e)

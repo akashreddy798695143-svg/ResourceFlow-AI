@@ -4,31 +4,24 @@ import { setSessionCookie, handleAuthError } from '@/lib/auth'
 import { ok, err, parseBody } from '@/lib/api'
 import { verifyOtp } from '@/lib/services/otp-service'
 import { sendEmail } from '@/lib/services/email-service'
-import { sendSms } from '@/lib/services/sms-service'
 import { renderRegistrationEmail } from '@/lib/services/email-templates'
 import { dispatchNotification, getUserRecipient } from '@/lib/services/notification-service'
 import { recordAudit } from '@/lib/events'
 
 // POST /api/auth/verify-otp
-// Stage 2 of dual-OTP registration. Verifies OTPs one at a time:
-//   - First call with channel=SMS verifies the phone OTP → sets phoneVerified=true
-//   - Second call with channel=EMAIL verifies the email OTP → sets emailVerified=true + activates account
-// Returns { activated: true } only when BOTH are verified.
+// Email-only OTP verification. Verifies the email OTP and activates the account.
 export async function POST(req: NextRequest) {
   try {
     const body = parseBody(await req.json())
-    const { userId, identifier, code, channel } = body
-    // identifier is the phone (for SMS) or email (for EMAIL)
-    if (!userId || !identifier || !code || !channel) {
-      return err('Missing required fields: userId, identifier, code, channel', 422)
+    const { userId, email, code } = body
+    if (!userId || !email || !code) {
+      return err('Missing required fields: userId, email, code', 422)
     }
-    const channelNorm = String(channel).toUpperCase()
-    if (!['SMS', 'EMAIL'].includes(channelNorm)) return err('Invalid channel', 422)
-    const identifierNorm = String(identifier).replace(/[\s()-]/g, '')
+    const emailLower = String(email).toLowerCase()
 
     // Verify the OTP (argon2 hash compare, expiry check, attempt limit, single-use)
     const result = await verifyOtp({
-      identifier: identifierNorm,
+      identifier: emailLower,
       purpose: 'REGISTRATION',
       code: String(code),
     })
@@ -38,70 +31,44 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Mark the corresponding channel as verified
-    const updateData: any = {}
-    if (channelNorm === 'SMS') updateData.phoneVerified = true
-    else updateData.emailVerified = true
-
+    // Mark email verified + activate the account
     const user = await db.user.update({
       where: { id: String(userId) },
-      data: updateData,
+      data: { emailVerified: true, phoneVerified: true, active: true },
     })
 
-    // Check if BOTH are verified → activate the account
-    if (user.phoneVerified && user.emailVerified && !user.active) {
-      const activatedUser = await db.user.update({
-        where: { id: user.id },
-        data: { active: true },
-      })
+    await setSessionCookie({ id: user.id, email: user.email, name: user.name, role: user.role })
+    await recordAudit({
+      userId: user.id,
+      role: user.role,
+      action: 'REGISTER_VERIFIED',
+      entityId: user.id,
+      newState: 'ACTIVE',
+      reason: 'Email OTP verified — account activated',
+    })
 
-      await setSessionCookie({ id: activatedUser.id, email: activatedUser.email, name: activatedUser.name, role: activatedUser.role })
-      await recordAudit({
-        userId: activatedUser.id,
-        role: activatedUser.role,
-        action: 'REGISTER_VERIFIED',
-        entityId: activatedUser.id,
-        newState: 'ACTIVE',
-        reason: 'Both phone + email OTP verified — account activated',
-      })
+    // Send registration confirmation email
+    const { subject, html } = renderRegistrationEmail({ name: user.name, email: user.email, role: user.role })
+    const emailRes = await sendEmail({ to: user.email, subject, html })
 
-      // Send registration confirmation SMS + email
-      if (activatedUser.phone) {
-        const smsText = `RESOURCEFLOW AI registration successful. Your account has been verified successfully.`
-        await sendSms(activatedUser.phone, smsText)
-      }
-      const { subject, html } = renderRegistrationEmail({ name: activatedUser.name, email: activatedUser.email, role: activatedUser.role })
-      await sendEmail({ to: activatedUser.email, subject, html })
-
-      // In-app notification
-      const recipient = await getUserRecipient(activatedUser.id)
-      if (recipient) {
-        await dispatchNotification('REGISTRATION_VERIFIED', [recipient], {
-          title: 'Registration Successful',
-          message: 'Your account has been verified successfully.',
-        })
-      }
-
-      return ok({
-        id: activatedUser.id,
-        email: activatedUser.email,
-        name: activatedUser.name,
-        role: activatedUser.role,
-        activated: true,
-        phoneVerified: true,
-        emailVerified: true,
-        message: 'Account activated successfully.',
+    // In-app notification
+    const recipient = await getUserRecipient(user.id)
+    if (recipient) {
+      await dispatchNotification('REGISTRATION_VERIFIED', [recipient], {
+        title: 'Registration Successful',
+        message: 'Your account has been verified successfully.',
       })
     }
 
-    // Only one channel verified — return the partial state
     return ok({
-      userId: user.id,
-      phoneVerified: user.phoneVerified,
-      emailVerified: user.emailVerified,
-      activated: false,
-      message: channelNorm === 'SMS' ? 'Phone verified. Now verify your email.' : 'Email verified. Now verify your phone.',
-      nextChannel: user.phoneVerified ? 'EMAIL' : 'SMS',
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      activated: true,
+      emailVerified: true,
+      emailSent: emailRes.ok,
+      message: 'Account activated successfully.',
     })
   } catch (e) {
     return handleAuthError(e)

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from '@/lib/use-router'
 import { toast } from 'sonner'
-import { RadioTower, Loader2, Smartphone, ShieldCheck, Mail } from 'lucide-react'
+import { RadioTower, Loader2, ShieldCheck, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { apiPost, apiGet } from '@/lib/api-client'
-import { cn } from '@/lib/utils'
 
 const ROLES = [
   { value: 'CITIZEN', label: 'Citizen — report & track incidents' },
@@ -25,12 +24,8 @@ interface RegisterResponse {
   email: string
   name: string
   role: string
-  phone: string  // masked
   otpRequired: boolean
-  dualOtp: boolean
-  phoneOtpSent: boolean
   emailOtpSent: boolean
-  phoneOtpError?: string
   emailOtpError?: string
   otpExpiresAt: string
   message: string
@@ -38,42 +33,29 @@ interface RegisterResponse {
 
 export function RegisterView() {
   const { navigate } = useRouter()
-  // Stage 1: registration form
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('CITIZEN')
   const [loading, setLoading] = useState(false)
-  // Stage 2: dual OTP verification
   const [stage, setStage] = useState<'register' | 'verify'>('register')
   const [regResult, setRegResult] = useState<RegisterResponse | null>(null)
-  const [phoneOtp, setPhoneOtp] = useState('')
-  const [emailOtp, setEmailOtp] = useState('')
-  const [phoneVerified, setPhoneVerified] = useState(false)
-  const [emailVerified, setEmailVerified] = useState(false)
-  const [verifying, setVerifying] = useState<'phone' | 'email' | null>(null)
-  const [resending, setResending] = useState<'phone' | 'email' | null>(null)
+  const [otp, setOtp] = useState('')
+  const [verifying, setVerifying] = useState(false)
+  const [resending, setResending] = useState(false)
 
   const submitRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     if (password.length < 6) return toast.error('Password must be at least 6 characters')
-    if (!phone.trim()) return toast.error('Phone number is required for OTP verification')
     setLoading(true)
     try {
-      const res = await apiPost<RegisterResponse>('/api/auth/register', {
-        name, email, password, role, phone,
-      })
+      const res = await apiPost<RegisterResponse>('/api/auth/register', { name, email, password, role })
       setRegResult(res)
       setStage('verify')
-      if (res.phoneOtpSent && res.emailOtpSent) {
-        toast.success('Verification codes sent to your phone (SMS) and email')
-      } else if (res.phoneOtpSent) {
-        toast.warning('Phone OTP sent. Email OTP failed — you can resend it below.')
-      } else if (res.emailOtpSent) {
-        toast.warning('Email OTP sent. Phone OTP failed — you can resend it below.')
+      if (res.emailOtpSent) {
+        toast.success('Verification code sent to your email')
       } else {
-        toast.error('Both OTP deliveries failed. You can resend each below.')
+        toast.error(res.emailOtpError || 'Unable to send OTP. You can resend below.')
       }
     } catch (e: any) {
       toast.error(e.message)
@@ -82,56 +64,41 @@ export function RegisterView() {
     }
   }
 
-  const verifyOtp = async (channel: 'phone' | 'email') => {
-    const code = channel === 'phone' ? phoneOtp : emailOtp
-    if (code.length !== 6) return toast.error(`Enter the 6-digit ${channel} code`)
-    setVerifying(channel)
+  const submitVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (otp.length !== 6) return toast.error('Enter the 6-digit code')
+    setVerifying(true)
     try {
-      const identifier = channel === 'phone'
-        ? phone.replace(/[\s()-]/g, '')
-        : email.toLowerCase()
-      const res = await apiPost<any>('/api/auth/verify-otp', {
+      const res = await apiPost<{ activated: boolean; message: string }>('/api/auth/verify-otp', {
         userId: regResult!.userId,
-        identifier,
-        code,
-        channel: channel === 'phone' ? 'SMS' : 'EMAIL',
+        email,
+        code: otp,
       })
-      if (res.activated) {
-        toast.success(res.message || 'Account activated successfully')
-        const me = await apiGet<any>('/api/auth/me')
-        if (me.role === 'CITIZEN') navigate('/citizen-dashboard')
-        else if (me.role === 'RESPONDER') navigate('/incidents')
-        else navigate('/command-center')
-        return
-      }
-      // Partial — one channel verified
-      if (channel === 'phone') { setPhoneVerified(true); setPhoneOtp('') }
-      else { setEmailVerified(true); setEmailOtp('') }
-      toast.success(res.message || `${channel} verified`)
+      toast.success(res.message || 'Account activated')
+      const me = await apiGet<any>('/api/auth/me')
+      if (me.role === 'CITIZEN') navigate('/citizen-dashboard')
+      else if (me.role === 'RESPONDER') navigate('/incidents')
+      else navigate('/command-center')
     } catch (e: any) {
-      toast.error(e.message || `${channel} OTP verification failed`)
+      toast.error(e.message || 'OTP verification failed')
     } finally {
-      setVerifying(null)
+      setVerifying(false)
     }
   }
 
-  const resendOtp = async (channel: 'phone' | 'email') => {
-    setResending(channel)
+  const resendOtp = async () => {
+    setResending(true)
     try {
-      const identifier = channel === 'phone'
-        ? phone.replace(/[\s()-]/g, '')
-        : email.toLowerCase()
       const res = await apiPost<{ sent: boolean; message: string; error?: string }>('/api/auth/resend-otp', {
         userId: regResult!.userId,
-        identifier,
-        channel: channel === 'phone' ? 'SMS' : 'EMAIL',
+        email,
       })
       if (res.sent) toast.success(res.message)
       else toast.error(res.error || res.message)
     } catch (e: any) {
       toast.error(e.message)
     } finally {
-      setResending(null)
+      setResending(false)
     }
   }
 
@@ -153,7 +120,7 @@ export function RegisterView() {
             <Card>
               <CardHeader>
                 <CardTitle>Create account</CardTitle>
-                <CardDescription>Register with phone + email dual OTP verification</CardDescription>
+                <CardDescription>Register with email OTP verification</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={submitRegister} className="space-y-4">
@@ -162,11 +129,7 @@ export function RegisterView() {
                     <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="phone">Phone number <span className="text-muted-foreground text-[10px]">(E.164, for SMS OTP)</span></Label>
-                    <Input id="phone" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+97798XXXXXXXX" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="email">Email <span className="text-muted-foreground text-[10px]">(for email OTP)</span></Label>
+                    <Label htmlFor="email">Email</Label>
                     <Input id="email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
                   </div>
                   <div className="space-y-1.5">
@@ -185,8 +148,8 @@ export function RegisterView() {
                     </Select>
                   </div>
                   <Button type="submit" className="w-full gap-1.5" disabled={loading}>
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
-                    {loading ? 'Sending OTPs…' : 'Register & Send OTPs'}
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                    {loading ? 'Sending OTP…' : 'Register & Send OTP'}
                   </Button>
                 </form>
                 <p className="mt-6 text-center text-xs text-muted-foreground">
@@ -198,71 +161,37 @@ export function RegisterView() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" /> Verify OTPs</CardTitle>
+                <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" /> Verify OTP</CardTitle>
                 <CardDescription>
-                  Enter the 6-digit codes sent to your phone ({regResult?.phone}) and email.
+                  Enter the 6-digit code sent to <span className="font-mono text-foreground">{email}</span>.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-5">
-                {/* Phone OTP */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="phoneOtp" className="flex items-center gap-1.5"><Smartphone className="h-3.5 w-3.5" /> Phone OTP</Label>
-                    {phoneVerified && <Badge variant="outline" className="text-[9px] text-sev-LOW border-sev-LOW">✓ Verified</Badge>}
-                    {!phoneVerified && !regResult?.phoneOtpSent && <Badge variant="outline" className="text-[9px] text-sev-CRITICAL border-sev-CRITICAL">✗ Not sent</Badge>}
+              <CardContent>
+                <form onSubmit={submitVerify} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="otp">6-digit verification code</Label>
+                    <Input
+                      id="otp" required inputMode="numeric" pattern="[0-9]{6}" maxLength={6}
+                      value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                      placeholder="000000"
+                      className="text-center text-2xl tracking-[0.5em] font-mono"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Expires at {regResult ? new Date(regResult.otpExpiresAt).toLocaleTimeString() : '—'}
+                    </p>
                   </div>
-                  <Input
-                    id="phoneOtp" inputMode="numeric" pattern="[0-9]{6}" maxLength={6}
-                    value={phoneOtp} onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ''))}
-                    placeholder="000000" disabled={phoneVerified}
-                    className={cn('text-center text-xl tracking-[0.4em] font-mono', phoneVerified && 'opacity-50')}
-                  />
-                  {!phoneVerified && (
-                    <div className="flex gap-2">
-                      <Button type="button" size="sm" className="flex-1 gap-1.5" onClick={() => verifyOtp('phone')} disabled={verifying === 'phone' || phoneOtp.length !== 6}>
-                        {verifying === 'phone' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                        Verify Phone
-                      </Button>
-                      <Button type="button" size="sm" variant="outline" onClick={() => resendOtp('phone')} disabled={resending === 'phone'}>
-                        {resending === 'phone' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Resend'}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Email OTP */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="emailOtp" className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> Email OTP</Label>
-                    {emailVerified && <Badge variant="outline" className="text-[9px] text-sev-LOW border-sev-LOW">✓ Verified</Badge>}
-                    {!emailVerified && !regResult?.emailOtpSent && <Badge variant="outline" className="text-[9px] text-sev-CRITICAL border-sev-CRITICAL">✗ Not sent</Badge>}
-                  </div>
-                  <Input
-                    id="emailOtp" inputMode="numeric" pattern="[0-9]{6}" maxLength={6}
-                    value={emailOtp} onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
-                    placeholder="000000" disabled={emailVerified}
-                    className={cn('text-center text-xl tracking-[0.4em] font-mono', emailVerified && 'opacity-50')}
-                  />
-                  {!emailVerified && (
-                    <div className="flex gap-2">
-                      <Button type="button" size="sm" className="flex-1 gap-1.5" onClick={() => verifyOtp('email')} disabled={verifying === 'email' || emailOtp.length !== 6}>
-                        {verifying === 'email' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                        Verify Email
-                      </Button>
-                      <Button type="button" size="sm" variant="outline" onClick={() => resendOtp('email')} disabled={resending === 'email'}>
-                        {resending === 'email' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Resend'}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="rounded-md border border-border bg-muted/30 p-2.5 text-[11px] text-muted-foreground">
-                  Account activates only when BOTH phone + email are verified. OTP expires at {regResult ? new Date(regResult.otpExpiresAt).toLocaleTimeString() : '—'}.
-                </div>
-
+                  <Button type="submit" className="w-full gap-1.5" disabled={verifying}>
+                    {verifying && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {verifying ? 'Verifying…' : 'Verify & Activate'}
+                  </Button>
+                  <Button type="button" variant="outline" className="w-full" onClick={resendOtp} disabled={resending}>
+                    {resending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    {resending ? 'Resending…' : 'Resend OTP'}
+                  </Button>
+                </form>
                 <button
                   onClick={() => setStage('register')}
-                  className="text-xs text-muted-foreground hover:text-foreground"
+                  className="mt-4 text-xs text-muted-foreground hover:text-foreground"
                 >
                   ← Back to registration
                 </button>
@@ -272,7 +201,7 @@ export function RegisterView() {
         </div>
       </div>
       <footer className="border-t border-border bg-card/50 px-4 py-3 text-[11px] text-muted-foreground text-center">
-        RESOURCEFLOW AI · Dual OTP (phone + email) · Passwords hashed with Argon2id · Role enforced server-side
+        RESOURCEFLOW AI · Email OTP verification · Passwords hashed with Argon2id · Role enforced server-side
       </footer>
     </div>
   )
