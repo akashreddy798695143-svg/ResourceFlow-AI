@@ -32,9 +32,6 @@ export async function POST(req: NextRequest) {
     const existing = await db.user.findUnique({ where: { email: emailLower } })
     if (existing) return err('Email already registered', 409)
 
-    // Phone is optional now — store if provided but not required for OTP
-    const phoneStr = phone ? String(phone).replace(/[\s()-]/g, '') : null
-
     // Create the user as INACTIVE (active=false) until the email OTP is verified
     const user = await db.user.create({
       data: {
