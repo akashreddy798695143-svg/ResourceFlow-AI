@@ -80,37 +80,37 @@
 }
 
 .dark {
-  /* Dark theme — command center slate + amber */
-  --background: oklch(0.16 0.015 250);     /* deep slate */
+  /* Dark theme — government emergency command center (deep navy + amber) */
+  --background: oklch(0.145 0.025 255);     /* deep navy-slate */
   --foreground: oklch(0.96 0 0);
-  --card: oklch(0.21 0.018 250);
+  --card: oklch(0.19 0.022 255);
   --card-foreground: oklch(0.96 0 0);
-  --popover: oklch(0.21 0.018 250);
+  --popover: oklch(0.19 0.022 255);
   --popover-foreground: oklch(0.96 0 0);
-  --primary: oklch(0.7 0.17 60);           /* amber-500 bright */
-  --primary-foreground: oklch(0.16 0 0);
-  --secondary: oklch(0.27 0.02 250);
+  --primary: oklch(0.7 0.17 60);           /* amber-500 */
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.25 0.025 255);
   --secondary-foreground: oklch(0.96 0 0);
-  --muted: oklch(0.27 0.02 250);
+  --muted: oklch(0.25 0.025 255);
   --muted-foreground: oklch(0.72 0 0);
-  --accent: oklch(0.32 0.02 250);
+  --accent: oklch(0.30 0.025 255);
   --accent-foreground: oklch(0.96 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
+  --destructive: oklch(0.65 0.24 25);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.7 0.17 60);
   --chart-1: oklch(0.7 0.17 60);          /* amber */
   --chart-2: oklch(0.65 0.18 145);        /* emerald */
-  --chart-3: oklch(0.6 0.2 250);          /* slate-blue */
+  --chart-3: oklch(0.55 0.2 255);         /* blue */
   --chart-4: oklch(0.75 0.19 320);        /* magenta */
   --chart-5: oklch(0.65 0.2 12);          /* red-orange */
-  --sidebar: oklch(0.13 0.015 250);
+  --sidebar: oklch(0.11 0.025 255);       /* darker navy for sidebar */
   --sidebar-foreground: oklch(0.96 0 0);
   --sidebar-primary: oklch(0.7 0.17 60);
-  --sidebar-primary-foreground: oklch(0.16 0 0);
-  --sidebar-accent: oklch(0.27 0.02 250);
+  --sidebar-primary-foreground: oklch(0.145 0 0);
+  --sidebar-accent: oklch(0.25 0.025 255);
   --sidebar-accent-foreground: oklch(0.96 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.7 0.17 60);
 }
 
@@ -120,7 +120,56 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Disaster-themed animated background — subtle, professional, not flashy */
+    background-image:
+      /* Flood: horizontal water ripples (blue, very subtle, slow wave) */
+      radial-gradient(ellipse 800px 120px at 20% 90%, oklch(0.45 0.08 240 / 0.04) 0%, transparent 60%),
+      radial-gradient(ellipse 600px 100px at 70% 95%, oklch(0.5 0.10 230 / 0.03) 0%, transparent 55%),
+      /* Earthquake: faint diagonal tremor lines (warm tone, very subtle) */
+      repeating-linear-gradient(135deg, transparent 0px, transparent 80px, oklch(0.6 0.05 30 / 0.015) 80px, oklch(0.6 0.05 30 / 0.015) 81px),
+      /* Road block: dashed yellow lines (horizontal, very faint) */
+      repeating-linear-gradient(90deg, transparent 0px, transparent 120px, oklch(0.7 0.12 80 / 0.012) 120px, oklch(0.7 0.12 80 / 0.012) 140px, transparent 140px, transparent 240px),
+      /* Base gradient: deep navy with amber glow at top */
+      linear-gradient(180deg, oklch(0.16 0.03 260) 0%, oklch(0.145 0.025 255) 50%, oklch(0.13 0.02 250) 100%);
+    background-attachment: fixed;
   }
+}
+
+/* ─── Disaster theme animations ────────────────────────────────────────── */
+/* Subtle, purposeful — NOT gaming-style. These enhance the government
+   emergency-response aesthetic without being distracting. */
+
+/* Flood: slow water ripple pulse at the bottom of the viewport */
+@keyframes rf-flood-ripple {
+  0%, 100% { opacity: 0.4; transform: translateY(0) scaleX(1); }
+  50% { opacity: 0.6; transform: translateY(-2px) scaleX(1.05); }
+}
+
+/* Earthquake: subtle ground tremor (used on critical incident cards) */
+@keyframes rf-tremor {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-0.5px); }
+  40% { transform: translateX(0.5px); }
+  60% { transform: translateX(-0.3px); }
+  80% { transform: translateX(0.3px); }
+}
+
+/* Road block: dashed line march (slow, like a warning barricade) */
+@keyframes rf-road-march {
+  0% { background-position: 0 0; }
+  100% { background-position: 240px 0; }
+}
+
+/* Status pulse: critical incident indicator */
+@keyframes rf-critical-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.65 0.24 25 / 0.3); }
+  50% { box-shadow: 0 0 0 6px oklch(0.65 0.24 25 / 0); }
+}
+
+/* Count-up entrance for KPI numbers */
+@keyframes rf-count-up {
+  0% { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 /* Severity & status utility colors */
@@ -150,13 +199,36 @@
   .rf-scroll::-webkit-scrollbar-thumb:hover { background: oklch(0.5 0 0 / 0.5); }
 
   .map-tile-bg {
-    background: #1a1d23;
+    background: #0d1117;
+  }
+
+  /* Disaster theme utility classes */
+  .rf-flood-bg { animation: rf-flood-ripple 8s ease-in-out infinite; }
+  .rf-tremor { animation: rf-tremor 0.6s ease-in-out infinite; }
+  .rf-road-march {
+    background-image: repeating-linear-gradient(90deg, oklch(0.7 0.12 80 / 0.15) 0, oklch(0.7 0.12 80 / 0.15) 20px, transparent 20px, transparent 40px);
+    animation: rf-road-march 3s linear infinite;
+  }
+  .rf-critical-pulse { animation: rf-critical-pulse 2s ease-out infinite; }
+  .rf-count-up { animation: rf-count-up 0.4s ease-out; }
+
+  /* Loading skeleton */
+  .rf-skeleton {
+    background: linear-gradient(90deg, oklch(0.2 0.02 255 / 0.3) 25%, oklch(0.25 0.02 255 / 0.5) 50%, oklch(0.2 0.02 255 / 0.3) 75%);
+    background-size: 200% 100%;
+    animation: rf-skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: 4px;
   }
 }
 
-/* Leaflet defaults (since we use react-leaflet) */
+@keyframes rf-skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Leaflet defaults */
 .leaflet-container {
-  background: #1a1d23 !important;
+  background: #0d1117 !important;
   font-family: var(--font-geist-sans);
 }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip {
