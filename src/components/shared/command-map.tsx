@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Loader2 } from 'lucide-react'
 import type { Incident, Resource } from '@/lib/types'
@@ -23,6 +24,14 @@ export function CommandMap(props: {
   selectedIncident: string | null
   onSelectIncident: (id: string) => void
   onOpenIncident: (id: string) => void
+  fullscreenEnabled?: boolean
 }) {
-  return <CommandMapInner {...props} />
+  const [fullscreen, setFullscreen] = useState(false)
+  return (
+    <CommandMapInner
+      {...props}
+      fullscreen={fullscreen}
+      onToggleFullscreen={props.fullscreenEnabled !== false ? () => setFullscreen((v) => !v) : undefined}
+    />
+  )
 }

@@ -19,6 +19,7 @@ import {
   IncidentTypeBadge, RiskBadge, StatusBadge, ResourceStatusBadge, RESOURCE_TYPE_LABELS,
 } from '@/components/shared/badges'
 import { CommandMap } from '@/components/shared/command-map'
+import { WeatherCard } from '@/components/shared/weather-card'
 import type { Incident, Resource, Approval, DashboardEvent, IncidentStatus, RiskLevel, ResourceStatus } from '@/lib/types'
 
 interface EmailStatusEntry {
@@ -303,6 +304,9 @@ export function IncidentDetailView() {
             </CardContent>
           </Card>
         )}
+
+        {/* Current Weather + Environmental Risk */}
+        <WeatherCard lat={incident.latitude} lng={incident.longitude} />
 
         {/* Response tracking */}
         {incident.assignedResourceId && (

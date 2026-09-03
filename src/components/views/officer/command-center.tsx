@@ -27,6 +27,9 @@ export function CommandCenterView() {
   const [loading, setLoading] = useState(true)
   const [demoRunning, setDemoRunning] = useState(false)
   const [selectedIncident, setSelectedIncident] = useState<string | null>(null)
+  // Filters
+  const [typeFilter, setTypeFilter] = useState<string>('ALL')
+  const [riskFilter, setRiskFilter] = useState<string>('ALL')
 
   const loadAll = useCallback(async () => {
     try {
@@ -81,8 +84,15 @@ export function CommandCenterView() {
     }
   }
 
-  // Priority queue: highest risk first, only active incidents
-  const priorityQueue = incidents
+  // Apply filters
+  const filteredIncidents = incidents.filter((i) => {
+    if (typeFilter !== 'ALL' && i.type !== typeFilter) return false
+    if (riskFilter !== 'ALL' && i.riskLevel !== riskFilter) return false
+    return true
+  })
+
+  // Priority queue: highest risk first, only active incidents (from filtered set)
+  const priorityQueue = filteredIncidents
     .filter((i) => !['RESOLVED', 'CLOSED'].includes(i.status))
     .sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))
     .slice(0, 12)
@@ -138,11 +148,35 @@ export function CommandCenterView() {
         <KPI label="Pending Approvals" value={stats.pendingApprovals} icon={CheckSquare} tone="HIGH" />
       </div>
 
+      {/* Filter bar */}
+      <div className="flex items-center gap-2 px-3 md:px-6 pb-2 flex-wrap">
+        <span className="text-[10px] text-muted-foreground uppercase font-medium">Type:</span>
+        {['ALL', 'FLOOD', 'EARTHQUAKE', 'FIRE', 'MEDICAL', 'LANDSLIDE', 'CYCLONE', 'ROAD_BLOCKAGE', 'INFRASTRUCTURE', 'OTHER'].map((t) => (
+          <button
+            key={t}
+            onClick={() => setTypeFilter(t)}
+            className={cn('text-[10px] px-2 py-0.5 rounded-md border transition', typeFilter === t ? 'border-primary bg-primary/15 text-primary font-medium' : 'border-border text-muted-foreground hover:bg-accent/40')}
+          >
+            {t === 'ALL' ? 'All' : t.replace(/_/g, ' ')}
+          </button>
+        ))}
+        <span className="text-[10px] text-muted-foreground uppercase font-medium ml-2">Risk:</span>
+        {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((r) => (
+          <button
+            key={r}
+            onClick={() => setRiskFilter(r)}
+            className={cn('text-[10px] px-2 py-0.5 rounded-md border transition', riskFilter === r ? 'border-primary bg-primary/15 text-primary font-medium' : 'border-border text-muted-foreground hover:bg-accent/40')}
+          >
+            {r === 'ALL' ? 'All' : r}
+          </button>
+        ))}
+      </div>
+
       {/* Main grid: map (left, big) + side panel (right) */}
       <div className="flex-1 min-h-0 grid lg:grid-cols-3 gap-3 px-3 md:px-6 pb-3">
         <div className="lg:col-span-2 min-h-[400px] lg:min-h-0 rounded-lg border border-border overflow-hidden bg-card">
           <CommandMap
-            incidents={incidents}
+            incidents={filteredIncidents}
             resources={resources}
             selectedIncident={selectedIncident}
             onSelectIncident={(id) => setSelectedIncident(id)}

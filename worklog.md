@@ -397,3 +397,44 @@ Stage Summary:
 - All existing features preserved (AI analysis, clustering, risk, resource optimization, approval, dashboard, reassignment, escalation, auto report, Gmail, OTP, multi-channel notifications, notification prefs + logs)
 - The complete hackathon demo workflow now works end-to-end with voice + GPS + dual OTP
 
+
+---
+Task ID: UPGRADE-GOV-PLATFORM
+Agent: orchestrator (main)
+Task: Upgrade to professional government-style disaster management command platform
+
+Work Log:
+- Inspected existing codebase (16 Prisma models, 13 services, 17 views, 25+ API routes) — confirmed all existing features intact
+- Restored .env with Gmail SMTP credentials (was reset by sandbox)
+- Upgraded weather-service.ts: added getWeatherFull() returning current weather (temp, feelsLike, humidity, windSpeed, windDirection, visibility, precipitation, weatherCode) + 7-day forecast (Open-Meteo free tier max) + environmental risk assessment (assessEnvironmentalRisk → LOW/MODERATE/HIGH/SEVERE with advisory). Never fabricates — returns null on failure. WMO weather code → human-readable condition mapping. Kept legacy getWeather()/getWeatherCached() for backward compat with risk-service.
+- Added /api/weather route: authenticated, returns current + forecast + environmentalRisk from lat/lng. No API key needed (Open-Meteo free tier). Server-side only.
+- Built shared WeatherCard component: displays current weather metrics (temp, feels like, humidity, wind, visibility, precipitation), environmental risk badge + advisory, 7-day forecast carousel. Professional government emergency-response style.
+- Upgraded command-map-inner.tsx: added full-screen toggle button (fixed overlay z-[9999]), layer selector (Street / Satellite via Esri / Terrain via OpenTopoMap), pulsing animated markers for CRITICAL/ESCALATED incidents (CSS @keyframes rfpulse), recenter-on-select flyTo animation, richer popup (citizen name, escalation level). Legend updated to show pulse animation.
+- Upgraded command-map.tsx wrapper: manages fullscreen state, passes fullscreen + onToggleFullscreen props to inner.
+- Added type + risk filters to Command Center: filter bar with Type (ALL/FLOOD/EARTHQUAKE/FIRE/MEDICAL/LANDSLIDE/CYCLONE/ROAD_BLOCKAGE/INFRASTRUCTURE/OTHER) + Risk (ALL/CRITICAL/HIGH/MEDIUM/LOW) toggle buttons. Map + priority queue now use filtered incidents.
+- Added WeatherCard to officer Incident Detail (between Risk Calculation and Response Tracking sections) — uses the incident's lat/lng automatically.
+- bun run lint passes clean.
+- Verified weather API: GET /api/weather?lat=27.7172&lng=85.324 → current: "Light drizzle" 21.5°C, forecast: 7 days, envRisk: LOW — real Open-Meteo data, never fabricated.
+
+Existing features preserved (NOT removed or broken):
+- Auth (JWT + Argon2 + OTP email verification + mandatory phone)
+- Citizen reporting (voice input, GPS, multilingual, photo)
+- AI analysis (Telugu/Hindi/English understanding)
+- Incident clustering, risk scoring, resource optimization
+- Officer approval, resource assignment, adaptive reassignment
+- Escalation, delay detection, response tracking
+- Multi-channel notifications (SMS demo + Email Gmail + In-app)
+- Notification preferences + logs
+- Email report delivery (citizen + officer)
+- Analytics (Recharts), Audit logs, Simulation center
+- Settings (admin: users, email config, notification prefs, logs)
+
+Stage Summary:
+- Weather: real current + 7-day forecast via Open-Meteo (free, no key) + environmental risk advisory
+- Map: full-screen mode, layer selector (street/satellite/terrain), pulsing critical markers, recenter animation
+- Command Center: type + risk filters, filtered map + priority queue
+- Incident Detail: Environmental Conditions card with weather + risk advisory
+- All data is real (from DB/API) — no hardcoded values, no fake statistics
+- Government professional design maintained (dark slate + amber, clean cards, meaningful icons)
+- bun run lint passes; dev server HTTP 200
+
