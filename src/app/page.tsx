@@ -21,8 +21,9 @@ import { AnalyticsView } from '@/components/views/analytics'
 import { AuditLogsView } from '@/components/views/audit-logs'
 import { SettingsView } from '@/components/views/settings'
 
+
 function Routed() {
-  const { user, loading } = useAuth()
+  const { user, loading, error } = useAuth()
   const { path, navigate } = useRouter()
 
   // Default route for authenticated officer/admin: go to command center
@@ -34,6 +35,33 @@ function Routed() {
       }
     }
   }, [user, path, navigate])
+
+  // If there's an auth error, show error message
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4 text-center max-w-md px-4">
+          <div className="text-red-600 text-5xl">⚠️</div>
+          <h1 className="text-2xl font-bold text-foreground">Connection Error</h1>
+          <p className="text-muted-foreground">{error}</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Please check that:
+          </p>
+          <ul className="text-sm text-muted-foreground text-left space-y-1">
+            <li>✓ DATABASE_URL is set in .env.local or Vercel environment variables</li>
+            <li>✓ The database server is running and reachable</li>
+            <li>✓ Your internet connection is stable</li>
+          </ul>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   // While loading auth, show a splash
   if (loading) {
@@ -100,3 +128,4 @@ export default function Home() {
     </AuthProvider>
   )
 }
+

@@ -221,8 +221,9 @@ A `.env.example` is included.
 # 1. Install dependencies
 bun install
 
-# 2. Configure env (defaults work for development)
-cp .env.example .env
+# 2. Configure environment variables
+cp .env.example .env.local
+# Edit .env.local and fill in your values (DATABASE_URL, SMTP credentials, etc.)
 
 # 3. Push the database schema
 bun run db:push
@@ -246,6 +247,23 @@ curl -X POST http://localhost:3000/api/admin/seed
 #   responder@resourceflow.ai
 #   citizen@resourceflow.ai
 ```
+
+### Environment Variables
+
+**Required for Development & Production:**
+- `DATABASE_URL` — PostgreSQL connection string (e.g., from Neon, AWS RDS, or local PostgreSQL)
+
+**Optional (with sensible defaults):**
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` — Email service credentials
+- `SMS_PROVIDER` — "console" (default, logs to terminal) or "twilio" (requires additional credentials)
+- `HUB_URL` — Realtime broadcast hub (if running mini-services/realtime)
+
+**For Vercel Deployment:**
+1. Go to your Vercel project → **Settings → Environment Variables**
+2. Add all required variables for the **Production** environment
+3. Redeploy the project
+
+⚠️ **IMPORTANT:** Never commit `.env.local` to Git. Keep it in `.gitignore`. Use `.env.example` (with placeholder values) to document required variables.
 
 ---
 
