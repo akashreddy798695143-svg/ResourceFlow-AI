@@ -7,9 +7,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
-}
+  }
 
 // ───────────────────────────────────────────────
 // USERS + AUTH
@@ -25,7 +25,7 @@ model User {
   id           String   @id @default(cuid())
   email        String   @unique
   name         String
-  passwordHash String
+  passwordHash String?
   role         Role     @default(CITIZEN)
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())

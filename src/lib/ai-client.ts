@@ -13,40 +13,68 @@ async function getZai() {
   return zaiInstance
 }
 
-export async function askAI(systemPrompt: string, userPrompt: string): Promise<{ ok: true; content: string } | { ok: false; error: string }> {
+export async function askAI(
+  systemPrompt: string,
+  userPrompt: string
+): Promise<
+  { ok: true; content: string } | { ok: false; error: string }
+> {
   try {
     const zai = await getZai()
+
     const completion = await zai.chat.completions.create({
       messages: [
-        { role: 'assistant', content: systemPrompt },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
       thinking: { type: 'disabled' },
     })
+
     const content = completion.choices?.[0]?.message?.content
+
     if (!content || !content.trim()) {
+      console.error('RESOURCEFLOW AI ERROR: Empty AI response')
       return { ok: false, error: 'Empty AI response' }
     }
-    return { ok: true, content }
+
+    return {
+      ok: true,
+      content,
+    }
   } catch (e: any) {
-    return { ok: false, error: String(e?.message ?? e) }
+    const errorMessage = String(e?.message ?? e)
+
+    console.error('RESOURCEFLOW AI ERROR:', errorMessage)
+
+    return {
+      ok: false,
+      error: errorMessage,
+    }
   }
 }
 
 // Extract a JSON object from a model response that may be wrapped in ```json fences.
 export function extractJson(content: string): any | null {
   if (!content) return null
+
   let text = content.trim()
-  // strip code fences
+
+  // Strip code fences
   if (text.startsWith('```')) {
-    text = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim()
+    text = text
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/```\s*$/i, '')
+      .trim()
   }
-  // find the first { ... last }
+
+  // Find the first { and last }
   const first = text.indexOf('{')
   const last = text.lastIndexOf('}')
+
   if (first !== -1 && last !== -1 && last > first) {
     text = text.slice(first, last + 1)
   }
+
   try {
     return JSON.parse(text)
   } catch {
