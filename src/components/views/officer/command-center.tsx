@@ -221,6 +221,13 @@ export function CommandCenterView() {
                           {inc.escalationLevel > 0 && <Badge variant="outline" className="text-[9px] text-sev-CRITICAL border-sev-CRITICAL">L{inc.escalationLevel}</Badge>}
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground line-clamp-1">{inc.description}</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="text-[9px] uppercase tracking-wide text-muted-foreground">AI priority</span>
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                            <div className={cn('h-full rounded-full', (inc.riskScore || 0) >= 80 ? 'bg-red-500' : (inc.riskScore || 0) >= 60 ? 'bg-orange-500' : (inc.riskScore || 0) >= 35 ? 'bg-yellow-500' : 'bg-emerald-500')} style={{ width: `${Math.max(4, Math.min(100, inc.riskScore || 0))}%` }} />
+                          </div>
+                          <span className="font-mono text-[10px] text-primary">{inc.riskScore ?? '—'}/100</span>
+                        </div>
                         <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground/70">
                           <MapPin className="h-3 w-3" />
                           <span className="truncate">{inc.location}</span>

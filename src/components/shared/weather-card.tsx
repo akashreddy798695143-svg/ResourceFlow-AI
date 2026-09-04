@@ -145,7 +145,7 @@ export function WeatherCard({ lat, lng, compact = false }: { lat: number; lng: n
         {/* Forecast (hide in compact mode) */}
         {!compact && data.forecast && data.forecast.length > 1 && (
           <div>
-            <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-2">Forecast ({data.forecast.length} days)</p>
+            <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-2">10-day forecast</p>
             <div className="flex gap-2 overflow-x-auto rf-scroll pb-2">
               {data.forecast.map((f, i) => (
                 <div key={f.date} className="shrink-0 w-24 rounded-md border border-border bg-card/40 p-2 text-center">

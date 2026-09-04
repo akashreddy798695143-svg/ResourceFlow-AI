@@ -135,6 +135,98 @@
   }
 }
 
+.rf-ai-assistant {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 80;
+}
+.rf-ai-launcher {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(240, 138, 75, 0.25);
+  animation: rf-ai-pulse 3s ease-in-out infinite;
+}
+.rf-ai-panel {
+  width: min(390px, calc(100vw - 2rem));
+  max-height: min(620px, calc(100vh - 2rem));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: rgba(9, 24, 32, 0.97);
+  color: var(--foreground);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(160, 216, 211, 0.08);
+  backdrop-filter: blur(18px);
+  animation: rf-ai-in 220ms ease-out both;
+}
+.rf-ai-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(90deg, rgba(240, 138, 75, 0.13), transparent 65%);
+}
+.rf-ai-icon {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  color: var(--primary);
+  background: rgba(240, 138, 75, 0.15);
+}
+.rf-ai-messages {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-height: 180px;
+  max-height: 390px;
+  overflow-y: auto;
+  padding: 0.85rem;
+}
+.rf-ai-message {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 92%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid rgba(160, 216, 211, 0.1);
+  border-radius: 0.55rem 0.55rem 0.55rem 0.15rem;
+  background: rgba(22, 52, 61, 0.68);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.rf-ai-message-user {
+  align-self: flex-end;
+  border-radius: 0.55rem 0.55rem 0.15rem 0.55rem;
+  border-color: rgba(240, 138, 75, 0.22);
+  background: rgba(211, 93, 50, 0.18);
+}
+.rf-ai-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+.rf-ai-composer textarea { min-height: 3.25rem; resize: none; font-size: 0.78rem; }
+.rf-ai-composer button { flex: 0 0 auto; }
+@keyframes rf-ai-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes rf-ai-pulse {
+  0%, 100% { box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(240, 138, 75, 0.25); }
+  50% { box-shadow: 0 14px 36px rgba(0, 0, 0, 0.4), 0 0 0 5px rgba(240, 138, 75, 0.08); }
+}
+@media (max-width: 480px) {
+  .rf-ai-assistant { right: 0.75rem; bottom: 0.75rem; }
+  .rf-ai-launcher span { display: none; }
+  .rf-ai-launcher { width: 2.75rem; padding: 0; }
+}
+
 /* Photo-led landing atmosphere; the app itself keeps its command-center theme. */
 .rf-landing {
   --background: #07141b;

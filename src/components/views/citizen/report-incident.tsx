@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import {
   MapPin, Loader2, Send, Mic, Square, Navigation, Crosshair, Edit3,
   RadioTower, MicOff, RefreshCw, CheckCircle2, AlertTriangle, Languages, Upload, X,
+  Wifi, WifiOff,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,6 +47,14 @@ interface GpsFix {
   timestamp: string
 }
 
+interface QueuedReport {
+  id: string
+  payload: Record<string, unknown>
+  queuedAt: string
+}
+
+const QUEUED_REPORTS_KEY = 'resourceflow:queued-reports'
+
 export function ReportIncidentView() {
   const { navigate } = useRouter()
   const { user } = useAuth()
@@ -64,6 +73,8 @@ export function ReportIncidentView() {
   // Optional photo upload (image metadata only — the backend validates type + size)
   const [imageMeta, setImageMeta] = useState<{ filename?: string; size?: number; contentType?: string } | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [isOnline, setIsOnline] = useState(true)
+  const [queuedReports, setQueuedReports] = useState<QueuedReport[]>([])
 
   // Speech recognition state
   const [listening, setListening] = useState(false)
@@ -74,12 +85,54 @@ export function ReportIncidentView() {
   // ─── Auto GPS request on mount ─────────────────────────────────────────
   useEffect(() => {
     requestGps()
+    setIsOnline(navigator.onLine)
+    try {
+      setQueuedReports(JSON.parse(localStorage.getItem(QUEUED_REPORTS_KEY) || '[]'))
+    } catch {
+      setQueuedReports([])
+    }
     // Check if Web Speech API is supported
     if (typeof window !== 'undefined') {
       const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
       setVoiceSupported(!!SR)
     }
   }, [])
+
+  const saveQueuedReports = useCallback((reports: QueuedReport[]) => {
+    setQueuedReports(reports)
+    localStorage.setItem(QUEUED_REPORTS_KEY, JSON.stringify(reports))
+  }, [])
+
+  const flushQueuedReports = useCallback(async () => {
+    let reports: QueuedReport[] = []
+    try { reports = JSON.parse(localStorage.getItem(QUEUED_REPORTS_KEY) || '[]') } catch { return }
+    if (!reports.length) return
+
+    const remaining: QueuedReport[] = []
+    for (const report of reports) {
+      try {
+        await apiPost('/api/incidents', report.payload)
+        toast.success('Queued emergency report submitted')
+      } catch {
+        remaining.push(report)
+      }
+    }
+    saveQueuedReports(remaining)
+  }, [saveQueuedReports])
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true)
+      flushQueuedReports()
+    }
+    const handleOffline = () => setIsOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [flushQueuedReports])
 
   const requestGps = useCallback(() => {
     setGpsStatus('requesting')
@@ -139,7 +192,6 @@ export function ReportIncidentView() {
     recognitionRef.current = recognition
     setListening(true)
     setInterimTranscript('')
-    setInputMethod('voice')
 
     recognition.onresult = (event: any) => {
       let interim = ''
@@ -150,10 +202,9 @@ export function ReportIncidentView() {
         else interim += transcript
       }
       setInterimTranscript(interim)
-      if (final) {
-        setDescription((prev) => (prev ? prev + ' ' + final : final))
-      }
+      if (final) setDescription((prev) => (prev ? prev + ' ' + final : final))
     }
+    setInterimTranscript('')
     recognition.onerror = (event: any) => {
       toast.error(`Speech recognition error: ${event.error}`)
       setListening(false)
@@ -219,28 +270,35 @@ export function ReportIncidentView() {
     if (description.trim().length < 5) return toast.error('Describe the emergency in at least 5 characters')
     if (!gps) return toast.error('Location is required. Allow GPS access or place the pin manually.')
 
+    const payload = {
+      incidentType: type,
+      description: description.trim(),
+      latitude: gps.lat,
+      longitude: gps.lng,
+      location,
+      language,
+      inputMethod,
+      locationAccuracy: gps.accuracy,
+      locationTimestamp: gps.timestamp,
+      imageMeta,
+    }
+
     setSubmitting(true)
     try {
-      // The backend auto-derives citizen_id, citizen_name, citizen_phone, citizen_email
-      // from the authenticated session — we never send them from the frontend.
-      const res = await apiPost<{ incidentCode: string; id: string; citizen: any; location: any }>('/api/incidents', {
-        incidentType: type,
-        description: description.trim(),
-        latitude: gps.lat,
-        longitude: gps.lng,
-        location,  // may be null/undefined → backend reverse-geocodes
-        language,
-        inputMethod,
-        locationAccuracy: gps.accuracy,
-        locationTimestamp: gps.timestamp,
-        imageMeta,  // optional photo metadata
-      })
+      // The backend derives identity from the authenticated session.
+      const res = await apiPost<{ incidentCode: string; id: string; citizen: any; location: any }>('/api/incidents', payload)
       toast.success(`Report received: ${res.incidentCode}`, {
         description: 'AI analysis started. Track status with your incident code.',
       })
       navigate(user?.role === 'CITIZEN' ? '/citizen-dashboard' : `/incidents/${res.id}`)
     } catch (e: any) {
-      toast.error(e.message)
+      if (!navigator.onLine || e?.name === 'TypeError') {
+        const report: QueuedReport = { id: crypto.randomUUID(), payload, queuedAt: new Date().toISOString() }
+        saveQueuedReports([...queuedReports, report])
+        toast.success('Saved on this device', { description: 'The report will submit automatically when connectivity returns.' })
+      } else {
+        toast.error(e.message)
+      }
     } finally {
       setSubmitting(false)
     }
@@ -258,6 +316,10 @@ export function ReportIncidentView() {
         <p className="text-sm text-muted-foreground mt-1">
           Your location is captured automatically. Your identity is attached from your account.
         </p>
+        <div className={cn('mt-3 flex items-center justify-between rounded-md border px-3 py-2 text-xs', isOnline ? 'border-sev-LOW/30 bg-sev-LOW/10 text-sev-LOW' : 'border-sev-MEDIUM/40 bg-sev-MEDIUM/10 text-sev-MEDIUM')}>
+          <span className="flex items-center gap-1.5">{isOnline ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />} {isOnline ? 'Online — reports submit normally' : 'Offline — reports will be saved locally'}</span>
+          {queuedReports.length > 0 && <span className="font-mono">{queuedReports.length} queued</span>}
+        </div>
       </div>
 
       <Card>

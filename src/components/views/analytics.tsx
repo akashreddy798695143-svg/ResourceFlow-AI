@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { apiGet } from '@/lib/api-client'
 import { useRealtimeEvents } from '@/lib/use-realtime'
 import { toast } from 'sonner'
-import { Loader2, BarChart3, TrendingUp, AlertTriangle, Clock, Package, CheckCircle2 } from 'lucide-react'
+import { Loader2, BarChart3, TrendingUp, AlertTriangle, Clock, Package, CheckCircle2, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -12,6 +12,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, Legend,
 } from 'recharts'
 import type { Analytics, DashboardEvent } from '@/lib/types'
+import { Button } from '@/components/ui/button'
 
 const RISK_COLORS: Record<string, string> = {
   LOW: '#22c55e', MEDIUM: '#eab308', HIGH: '#f97316', CRITICAL: '#ef4444',
@@ -21,6 +22,8 @@ const TYPE_COLORS = ['#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899', '#14
 export function AnalyticsView() {
   const [data, setData] = useState<Analytics | null>(null)
   const [loading, setLoading] = useState(true)
+  const [summary, setSummary] = useState<string | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -38,6 +41,18 @@ export function AnalyticsView() {
     if (e.type.startsWith('INCIDENT') || e.type === 'RISK_CALCULATED' || e.type === 'INCIDENT_RESOLVED') load()
   }, [load]))
 
+  const generateSummary = async () => {
+    setSummaryLoading(true)
+    try {
+      const result = await apiGet<{ summary: string }>('/api/analytics/summary')
+      setSummary(result.summary)
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setSummaryLoading(false)
+    }
+  }
+
   if (loading) return <div className="flex items-center justify-center py-12 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading analytics…</div>
   if (!data) return <div className="p-6 text-center text-muted-foreground">No analytics available.</div>
 
@@ -51,6 +66,17 @@ export function AnalyticsView() {
         <h1 className="text-2xl font-bold flex items-center gap-2"><BarChart3 className="h-6 w-6 text-primary" /> Analytics</h1>
         <p className="text-sm text-muted-foreground mt-1">All metrics derived from the live database.</p>
       </div>
+
+      <Card className="mb-4 border-primary/30 bg-primary/5">
+        <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> AI disaster situation summary</CardTitle>
+          <Button size="sm" variant="outline" onClick={generateSummary} disabled={summaryLoading} className="gap-1.5">
+            {summaryLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            {summaryLoading ? 'Analysing…' : 'Generate summary'}
+          </Button>
+        </CardHeader>
+        {summary && <CardContent className="pt-2"><p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{summary}</p></CardContent>}
+      </Card>
 
       {/* KPI grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3 mb-4">

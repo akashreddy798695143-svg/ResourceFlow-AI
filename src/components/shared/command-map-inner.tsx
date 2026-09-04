@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import type { Incident, Resource } from '@/lib/types'
@@ -81,6 +81,7 @@ export function CommandMapInner({
 }) {
   const [layer, setLayer] = useState('street')
   const [showLayers, setShowLayers] = useState(false)
+  const [showHeatmap, setShowHeatmap] = useState(true)
   const center: [number, number] = [28.61, 77.21]
 
   const activeLayer = LAYERS.find((l) => l.id === layer) || LAYERS[0]
@@ -107,33 +108,19 @@ export function CommandMapInner({
           const radius = 8 + (inc.riskScore ? Math.round(inc.riskScore / 20) : 0)
           const isCritical = inc.riskLevel === 'CRITICAL' || inc.status === 'ESCALATED'
           return isCritical ? (
-            <Marker
-              key={inc.id}
-              position={[inc.latitude, inc.longitude]}
-              icon={criticalIcon(colorMap[riskColor] || '#a3a3a3', radius)}
-              eventHandlers={{ click: () => onSelectIncident(inc.id) }}
-            >
-              <Popup>
-                <IncidentPopup inc={inc} onOpen={onOpenIncident} />
-              </Popup>
-            </Marker>
+            <Fragment key={inc.id}>
+              {showHeatmap && <CircleMarker center={[inc.latitude, inc.longitude]} radius={Math.max(24, radius * 3)} pathOptions={{ color: colorMap[riskColor] || '#a3a3a3', fillColor: colorMap[riskColor] || '#a3a3a3', fillOpacity: 0.12, weight: 1 }} />}
+              <Marker position={[inc.latitude, inc.longitude]} icon={criticalIcon(colorMap[riskColor] || '#a3a3a3', radius)} eventHandlers={{ click: () => onSelectIncident(inc.id) }}>
+                <Popup><IncidentPopup inc={inc} onOpen={onOpenIncident} /></Popup>
+              </Marker>
+            </Fragment>
           ) : (
-            <CircleMarker
-              key={inc.id}
-              center={[inc.latitude, inc.longitude]}
-              radius={radius}
-              pathOptions={{
-                color: colorMap[riskColor] || '#a3a3a3',
-                fillColor: colorMap[riskColor] || '#a3a3a3',
-                fillOpacity: 0.7,
-                weight: 2,
-              }}
-              eventHandlers={{ click: () => onSelectIncident(inc.id) }}
-            >
-              <Popup>
-                <IncidentPopup inc={inc} onOpen={onOpenIncident} />
-              </Popup>
-            </CircleMarker>
+            <Fragment key={inc.id}>
+              {showHeatmap && <CircleMarker center={[inc.latitude, inc.longitude]} radius={Math.max(22, radius * 2.5)} pathOptions={{ color: colorMap[riskColor] || '#a3a3a3', fillColor: colorMap[riskColor] || '#a3a3a3', fillOpacity: 0.1, weight: 1 }} />}
+              <CircleMarker center={[inc.latitude, inc.longitude]} radius={radius} pathOptions={{ color: colorMap[riskColor] || '#a3a3a3', fillColor: colorMap[riskColor] || '#a3a3a3', fillOpacity: 0.7, weight: 2 }} eventHandlers={{ click: () => onSelectIncident(inc.id) }}>
+                <Popup><IncidentPopup inc={inc} onOpen={onOpenIncident} /></Popup>
+              </CircleMarker>
+            </Fragment>
           )
         })}
 
@@ -193,6 +180,13 @@ export function CommandMapInner({
           </div>
         )}
       </div>
+      <button
+        onClick={() => setShowHeatmap((visible) => !visible)}
+        className={cn('absolute top-14 left-3 z-[1000] rounded-md border border-border bg-card/90 backdrop-blur p-2 text-xs hover:bg-accent/40 transition flex items-center gap-1.5', showHeatmap && 'text-primary border-primary/50')}
+        title="Toggle risk heatmap"
+      >
+        <Crosshair className="h-4 w-4" /> {showHeatmap ? 'Heatmap on' : 'Heatmap off'}
+      </button>
 
       {/* Legend */}
       <div className="absolute bottom-3 right-3 z-[1000] rounded-md border border-border bg-card/90 backdrop-blur p-2 text-[10px] space-y-1 pointer-events-none">

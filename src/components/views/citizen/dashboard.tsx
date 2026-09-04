@@ -2,22 +2,24 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from '@/lib/use-router'
-import { apiGet } from '@/lib/api-client'
+import { apiGet, apiPost } from '@/lib/api-client'
 import { useRealtimeEvents } from '@/lib/use-realtime'
 import { toast } from 'sonner'
-import { Plus, Search, ShieldAlert, Inbox, Loader2 } from 'lucide-react'
+import { Plus, Search, ShieldAlert, Inbox, Loader2, Siren } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { IncidentTypeBadge, RiskBadge, StatusBadge } from '@/components/shared/badges'
 import type { Incident, IncidentStatus, RiskLevel, DashboardEvent } from '@/lib/types'
+import { EmergencyServices } from '@/components/shared/emergency-services'
 
 export function CitizenDashboardView() {
   const { navigate } = useRouter()
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
   const [trackCode, setTrackCode] = useState('')
+  const [sosLoading, setSosLoading] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -65,6 +67,30 @@ export function CitizenDashboardView() {
     navigate(`/track-incident?code=${encodeURIComponent(trackCode.trim().toUpperCase())}`)
   }
 
+  const sendSos = () => {
+    if (!navigator.geolocation) return toast.error('Location is not available on this device.')
+    if (!window.confirm('Send an emergency SOS report with your current location?')) return
+    setSosLoading(true)
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      try {
+        const res = await apiGet<{ shortName?: string }>(`/api/geocode/reverse?lat=${position.coords.latitude}&lng=${position.coords.longitude}`)
+        const created = await apiPost<{ incidentCode: string }>('/api/incidents', {
+          incidentType: 'MEDICAL',
+          description: 'Citizen SOS: immediate assistance requested at current location.',
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          location: res.shortName || undefined,
+          inputMethod: 'text',
+          locationAccuracy: position.coords.accuracy,
+          locationTimestamp: new Date(position.timestamp).toISOString(),
+        })
+        toast.success(`SOS sent: ${created.incidentCode}`)
+        load()
+      } catch (error: any) { toast.error(error.message || 'SOS could not be sent') }
+      finally { setSosLoading(false) }
+    }, () => { setSosLoading(false); toast.error('Location permission is required for SOS.') }, { enableHighAccuracy: true, timeout: 10000 })
+  }
+
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-6">
       <div className="mb-5">
@@ -86,6 +112,14 @@ export function CitizenDashboardView() {
           <Input placeholder="Track by code: RF-2026-000001" value={trackCode} onChange={(e) => setTrackCode(e.target.value)} />
           <Button type="submit" variant="outline" className="gap-1.5"><Search className="h-3.5 w-3.5" /> Track</Button>
         </form>
+      </div>
+
+      <div className="grid gap-3 mb-5 md:grid-cols-2">
+        <Button variant="destructive" onClick={sendSos} disabled={sosLoading} className="gap-2">
+          {sosLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Siren className="h-4 w-4" />}
+          {sosLoading ? 'Locating and sending SOS…' : 'Emergency SOS'}
+        </Button>
+        {incidents[0]?.latitude && <EmergencyServices lat={incidents[0].latitude} lng={incidents[0].longitude} />}
       </div>
 
       {loading ? (
