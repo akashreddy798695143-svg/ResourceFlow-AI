@@ -99,7 +99,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const initials = user ? user.name.split(' ').map((s) => s[0]).join('').slice(0, 2).toUpperCase() : 'U'
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
+    <div className="rf-app-shell min-h-screen flex flex-col bg-background text-foreground">
       {/* Top bar */}
       <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="flex h-14 items-center gap-3 px-3 md:px-5">
@@ -274,7 +274,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 min-w-0 overflow-y-auto rf-scroll">
+        <main className="rf-app-main flex-1 min-w-0 overflow-y-auto rf-scroll">
           <div className="min-h-full">{children}</div>
           {/* Sticky footer */}
           <footer className="mt-auto border-t border-border bg-card/50 px-4 py-3 text-[11px] text-muted-foreground">
