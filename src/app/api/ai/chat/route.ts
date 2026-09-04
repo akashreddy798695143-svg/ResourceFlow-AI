@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
     if (!result.ok) {
       return NextResponse.json(
-        { error: 'The AI assistant is temporarily unavailable. Please try again shortly.' },
+        { error: result.error.includes('network') ? result.error : 'Gemini AI is temporarily unavailable. Please try again shortly.' },
         { status: 503 }
       )
     }
