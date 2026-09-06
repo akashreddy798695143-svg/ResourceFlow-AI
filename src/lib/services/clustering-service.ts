@@ -98,27 +98,30 @@ export async function clusterIncident(newIncident: Incident): Promise<Clustering
   }
 
   // If a matched incident already belongs to a cluster, attach to it.
-  const existingCluster = matched.find((m) => m.clusterId)
-  let cluster: IncidentCluster
+  let cluster: IncidentCluster | null = null
   let allMembers = [newIncident, ...matched]
-  if (existingCluster) {
-    cluster = await db.incidentCluster.findUnique({ where: { id: existingCluster.clusterId! } })
-    const ids: string[] = JSON.parse(cluster.incidentIds)
-    // merge in any new matched ids not already in cluster
-    for (const m of matched) if (!ids.includes(m.id)) ids.push(m.id)
-    ids.push(newIncident.id)
-    const unique = [...new Set(ids)]
-    const spread = computeSpread(unique, allMembers, newIncident)
-    cluster = await db.incidentCluster.update({
-      where: { id: cluster.id },
-      data: {
-        incidentIds: JSON.stringify(unique),
-        confidence: Math.min(1, 0.7 + unique.length * 0.05),
-        geoSpreadKm: spread,
-        latestReportAt: newIncident.createdAt,
-      },
-    })
-  } else {
+  const existingClusterMember = matched.find((m) => m.clusterId)
+  if (existingClusterMember?.clusterId) {
+    const foundCluster = await db.incidentCluster.findUnique({ where: { id: existingClusterMember.clusterId } })
+    if (foundCluster) {
+      const ids: string[] = JSON.parse(foundCluster.incidentIds)
+      for (const m of matched) if (!ids.includes(m.id)) ids.push(m.id)
+      ids.push(newIncident.id)
+      const unique = [...new Set(ids)]
+      const spread = computeSpread(unique, allMembers, newIncident)
+      cluster = await db.incidentCluster.update({
+        where: { id: foundCluster.id },
+        data: {
+          incidentIds: JSON.stringify(unique),
+          confidence: Math.min(1, 0.7 + unique.length * 0.05),
+          geoSpreadKm: spread,
+          latestReportAt: newIncident.createdAt,
+        },
+      })
+    }
+  }
+
+  if (!cluster) {
     // Create a new cluster
     const count = await db.incidentCluster.count()
     const clusterCode = `FC-${String(count + 1).padStart(3, '0')}`

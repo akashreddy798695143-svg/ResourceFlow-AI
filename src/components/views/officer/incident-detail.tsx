@@ -8,7 +8,7 @@ import { useRealtimeEvents } from '@/lib/use-realtime'
 import { toast } from 'sonner'
 import {
   ArrowLeft, Loader2, MapPin, Clock, Bot, CheckCircle2, XCircle, AlertTriangle,
-  TrendingUp, FileText, Activity, Zap, User, Mail, Send, Phone,
+  TrendingUp, FileText, Activity, Zap, User, Mail, Send, Phone, MessageCircle,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -51,6 +51,7 @@ export function IncidentDetailView() {
   const [approvalReason, setApprovalReason] = useState('')
   const [escalateReason, setEscalateReason] = useState('')
   const [retryingId, setRetryingId] = useState<string | null>(null)
+  const [whatsappSending, setWhatsappSending] = useState(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -185,6 +186,27 @@ export function IncidentDetailView() {
       toast.error(e.message)
     } finally {
       setActionLoading(false)
+    }
+  }
+
+  const sendWhatsAppReport = async () => {
+    setWhatsappSending(true)
+    try {
+      const res = await apiPost<{ sent: boolean; phone?: string; skipped?: boolean; reason?: string; error?: string; messageId?: string }>(
+        `/api/incidents/${id}/send-whatsapp-report`
+      )
+      if (res.skipped) {
+        toast.warning(`WhatsApp skipped: ${res.reason}`)
+      } else if (res.sent) {
+        toast.success(`WhatsApp report sent to ${res.phone}`)
+      } else {
+        toast.error(`WhatsApp send failed: ${res.error || 'Provider not configured — check .env'}`)
+      }
+      load()
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setWhatsappSending(false)
     }
   }
 
@@ -579,6 +601,71 @@ export function IncidentDetailView() {
                       )}
                     </div>
                   ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* WhatsApp Report — officer/admin only */}
+        {canApprove && (
+          <Card>
+            <CardHeader className="pb-2 border-b border-border">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-emerald-500" /> WhatsApp Report
+                <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-500/50">
+                  citizen
+                </Badge>
+                {!incident.citizenPhone && (
+                  <Badge variant="outline" className="text-[9px] text-sev-MEDIUM border-sev-MEDIUM">
+                    no phone
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 space-y-3">
+              {incident.citizenPhone ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs">
+                    <Phone className="h-3 w-3 text-muted-foreground" />
+                    <span className="font-mono text-muted-foreground">{incident.citizenPhone}</span>
+                    <Badge variant="outline" className="text-[9px]">registered number</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Sends a citizen-safe WhatsApp update to the reporting citizen's registered number.
+                    {' '}The message contains incident status only — no internal AI data or resource details.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full gap-1.5 border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-600"
+                    onClick={sendWhatsAppReport}
+                    disabled={whatsappSending}
+                  >
+                    {whatsappSending
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <MessageCircle className="h-3.5 w-3.5 text-emerald-500" />
+                    }
+                    {whatsappSending ? 'Sending…' : 'Send WhatsApp Report to Citizen'}
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground">
+                    ⚡ This is also sent automatically when AI analysis completes. Use this button to resend manually.
+                  </p>
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>No phone number registered for this citizen.</p>
+                  <p className="text-[10px]">Citizens can add a phone number in their profile settings.</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full gap-1.5 text-muted-foreground"
+                    onClick={sendWhatsAppReport}
+                    disabled={whatsappSending}
+                  >
+                    {whatsappSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />}
+                    {whatsappSending ? 'Checking…' : 'Try Send (uses profile phone)'}
+                  </Button>
                 </div>
               )}
             </CardContent>

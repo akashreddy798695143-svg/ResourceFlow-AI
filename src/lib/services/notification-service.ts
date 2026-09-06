@@ -22,9 +22,10 @@
 import { db } from '@/lib/db'
 import { sendSms, maskPhone } from '@/lib/services/sms-service'
 import { sendEmail, maskEmail } from '@/lib/services/email-service'
+import { sendWhatsApp } from '@/lib/services/whatsapp-service'
 import { recordAudit } from '@/lib/events'
 
-export type NotificationChannel = 'SMS' | 'EMAIL' | 'IN_APP'
+export type NotificationChannel = 'SMS' | 'EMAIL' | 'IN_APP' | 'WHATSAPP'
 export type NotificationType =
   | 'REGISTRATION_VERIFIED'
   | 'INCIDENT_CREATED'
@@ -61,6 +62,9 @@ interface Recipient {
   email: string
   phone?: string | null
   role: string
+  smsNotifications?: boolean
+  emailNotifications?: boolean
+  inAppNotifications?: boolean
 }
 
 export interface DispatchResult {
@@ -72,7 +76,7 @@ export interface DispatchResult {
 
 // Dispatch a notification to one or more recipients across channels.
 // Channels are chosen per recipient based on: type criticality, recipient prefs,
-// and what contact info they have (phone → SMS, email → EMAIL, always → IN_APP).
+// and what contact info they have (phone → SMS & WHATSAPP, email → EMAIL, always → IN_APP).
 export async function dispatchNotification(
   type: NotificationType,
   recipients: Recipient[],
@@ -83,18 +87,10 @@ export async function dispatchNotification(
     SMS: { sent: 0, failed: 0 },
     EMAIL: { sent: 0, failed: 0 },
     IN_APP: { sent: 0, failed: 0 },
+    WHATSAPP: { sent: 0, failed: 0 },
   }
 
   for (const r of recipients) {
-    // Determine channels for this recipient
-    const channels: NotificationChannel[] = []
-
-    // IN_APP: always (unless explicitly disabled AND not critical)
-    if (isCritical || r.smsNotifications) {
-      // Note: we read user prefs from the User record (the recipient object here is
-      // a projection; for accuracy we re-fetch below). For simplicity we trust the
-      // projection and treat critical as always-on.
-    }
     // Re-fetch the user's actual prefs to be safe
     const user = await db.user.findUnique({
       where: { id: r.userId },
@@ -102,16 +98,21 @@ export async function dispatchNotification(
     })
     if (!user) continue
 
+    const channels: NotificationChannel[] = []
     // IN_APP
     if (isCritical || user.inAppNotifications) channels.push('IN_APP')
     // SMS — needs a phone
     if ((isCritical || user.smsNotifications) && (user.phone || r.phone)) channels.push('SMS')
+    // WHATSAPP — needs a phone
+    if ((isCritical || user.smsNotifications) && (user.phone || r.phone)) channels.push('WHATSAPP')
     // EMAIL — needs an email
     if ((isCritical || user.emailNotifications) && (user.email || r.email)) channels.push('EMAIL')
 
     for (const channel of channels) {
       // Create a PENDING NotificationLog entry first
-      const recipientAddress = channel === 'SMS' ? (user.phone || r.phone || '') : (user.email || r.email || '')
+      const recipientAddress = (channel === 'SMS' || channel === 'WHATSAPP')
+        ? (user.phone || r.phone || '')
+        : (user.email || r.email || '')
       if (!recipientAddress && channel !== 'IN_APP') continue
 
       const log = await db.notificationLog.create({
@@ -148,14 +149,17 @@ export async function dispatchNotification(
       } else if (channel === 'SMS') {
         const res = await sendSms(recipientAddress, `${content.title}\n${content.message}`.slice(0, 320))
         ok = res.ok
-        if (!ok) errorMessage = res.error
+        if (!ok) errorMessage = res.error || null
+      } else if (channel === 'WHATSAPP') {
+        const res = await sendWhatsApp(recipientAddress, `${content.title}\n${content.message}`.slice(0, 320))
+        ok = res.ok
+        if (!ok) errorMessage = res.error || null
       } else if (channel === 'EMAIL') {
         if (content.emailHtml && content.emailSubject) {
           const res = await sendEmail({ to: recipientAddress, subject: content.emailSubject, html: content.emailHtml })
           ok = res.ok
-          if (!ok) errorMessage = res.error
+          if (!ok) errorMessage = res.error || null
         } else {
-          // No HTML body provided — skip email (but log it)
           errorMessage = 'Email skipped — no HTML body provided for this notification'
         }
       }
@@ -170,15 +174,15 @@ export async function dispatchNotification(
     }
   }
 
-  const sent = perChannel.SMS.sent + perChannel.EMAIL.sent + perChannel.IN_APP.sent
-  const failed = perChannel.SMS.failed + perChannel.EMAIL.failed + perChannel.IN_APP.failed
+  const sent = perChannel.SMS.sent + perChannel.EMAIL.sent + perChannel.IN_APP.sent + perChannel.WHATSAPP.sent
+  const failed = perChannel.SMS.failed + perChannel.EMAIL.failed + perChannel.IN_APP.failed + perChannel.WHATSAPP.failed
 
   // Audit summary (one line per dispatch, not per recipient)
   await recordAudit({
     action: 'NOTIFICATION_DISPATCHED',
     entityId: content.incidentId,
     newState: `${type} (sent=${sent}, failed=${failed})`,
-    reason: `Multi-channel dispatch: SMS ${perChannel.SMS.sent}/${perChannel.SMS.failed}, EMAIL ${perChannel.EMAIL.sent}/${perChannel.EMAIL.failed}, IN_APP ${perChannel.IN_APP.sent}/${perChannel.IN_APP.failed}`,
+    reason: `Multi-channel dispatch: SMS ${perChannel.SMS.sent}/${perChannel.SMS.failed}, WHATSAPP ${perChannel.WHATSAPP.sent}/${perChannel.WHATSAPP.failed}, EMAIL ${perChannel.EMAIL.sent}/${perChannel.EMAIL.failed}, IN_APP ${perChannel.IN_APP.sent}/${perChannel.IN_APP.failed}`,
   }).catch(() => {})
 
   return { notificationType: type, sent, failed, perChannel: Object.entries(perChannel).map(([channel, v]) => ({ channel: channel as NotificationChannel, ...v })) }

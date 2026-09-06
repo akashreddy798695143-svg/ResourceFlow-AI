@@ -21,8 +21,32 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       },
     })
     if (!incident) return err('Incident not found', 404)
-    if (user.role === 'CITIZEN' && incident.reportedById !== user.id) {
-      return err('Forbidden', 403)
+    if (user.role === 'CITIZEN') {
+      if (incident.reportedById !== user.id) {
+        return err('Forbidden — unauthorized incident access', 403)
+      }
+      // Public-safe view for reporting citizen
+      return ok({
+        incident: {
+          id: incident.id,
+          incidentCode: incident.incidentCode,
+          type: incident.type,
+          description: incident.description,
+          location: incident.location,
+          latitude: incident.latitude,
+          longitude: incident.longitude,
+          status: incident.status,
+          createdAt: incident.createdAt,
+          updatedAt: incident.updatedAt,
+          assignedAt: incident.assignedAt,
+          acknowledgedAt: incident.acknowledgedAt,
+          startedAt: incident.startedAt,
+          arrivedAt: incident.arrivedAt,
+          resolvedAt: incident.resolvedAt,
+          events: incident.events,
+          resolutionEmailSent: incident.resolutionEmailSent,
+        },
+      })
     }
     return ok({ incident })
   } catch (e) {

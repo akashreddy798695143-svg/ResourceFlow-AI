@@ -8,7 +8,8 @@ import { reverseGeocode } from '@/lib/services/geocode-service'
 import type { IncidentType } from '@prisma/client'
 
 const ALLOWED: IncidentType[] = [
-  'FLOOD', 'CYCLONE', 'EARTHQUAKE', 'LANDSLIDE', 'ROAD_BLOCKAGE', 'FIRE', 'MEDICAL', 'INFRASTRUCTURE', 'OTHER',
+  'FLOOD', 'CYCLONE', 'EARTHQUAKE', 'LANDSLIDE', 'ROAD_BLOCKAGE', 'FIRE', 'MEDICAL', 'INFRASTRUCTURE',
+  'BUILDING_COLLAPSE', 'FOREST_FIRE', 'HEAVY_RAINFALL', 'INDUSTRIAL_ACCIDENT', 'OTHER',
 ]
 
 // POST /api/incidents — citizen (or officer/admin) reports a new incident
@@ -141,6 +142,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
     const type = searchParams.get('type')
+    const sortBy = searchParams.get('sortBy')
     const limit = Math.min(200, Number(searchParams.get('limit') || 100))
 
     let where: any = {}
@@ -149,13 +151,21 @@ export async function GET(req: NextRequest) {
     if (user.role === 'CITIZEN') {
       where.reportedById = user.id
     } else if (user.role === 'RESPONDER') {
-      // Responder: assigned incidents + own reports
-      where.OR = [{ reportedById: user.id }, { assignments: { some: { assignedById: user.id } } }]
+      // Responder: assigned incidents + active deployments + own reports
+      where.OR = [
+        { reportedById: user.id },
+        { assignments: { some: { assignedById: user.id } } },
+        { status: { in: ['ASSIGNED', 'IN_PROGRESS', 'DELAYED', 'ESCALATED'] }, assignedResourceId: { not: null } },
+      ]
     }
+
+    const orderBy: any = sortBy === 'priority'
+      ? [{ riskScore: 'desc' }, { createdAt: 'desc' }]
+      : { createdAt: 'desc' }
 
     const incidents = await db.incident.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy,
       take: limit,
       include: { reportedBy: { select: { name: true } } },
     })

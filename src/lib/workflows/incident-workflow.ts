@@ -31,7 +31,7 @@ async function notifyCitizen(incidentId: string, type: NotificationType, message
 // receive the officer-oriented emailSubject/emailHtml.
 async function dispatchIncidentEventNotification(
   incidentId: string,
-  type: 'INCIDENT_CREATED' | 'INCIDENT_PRIORITY_CHANGED' | 'APPROVAL_REQUIRED' | 'RESOURCE_ASSIGNED' | 'RESOURCE_REASSIGNED' | 'RESPONSE_DELAYED' | 'INCIDENT_ESCALATED' | 'INCIDENT_RESOLVED' | 'REPORT_GENERATED',
+  type: 'INCIDENT_CREATED' | 'INCIDENT_PRIORITY_CHANGED' | 'APPROVAL_REQUIRED' | 'RESOURCE_ASSIGNED' | 'RESOURCE_REASSIGNED' | 'RESPONSE_DELAYED' | 'INCIDENT_ESCALATED' | 'INCIDENT_RESOLVED' | 'REPORT_GENERATED' | 'ASSIGNMENT_CHANGED',
   content: {
     title: string
     message: string  // SMS-friendly short message
@@ -177,6 +177,7 @@ export async function runIncidentWorkflow(incidentId: string) {
     const clusterSize = cluster.clusterSize
     const availableResources = await db.resource.count({ where: { status: 'AVAILABLE' } })
     const risk = calculateRisk({
+      incidentType: incident.type,
       severity: analysis.severity,
       peopleAffected: analysis.people_affected_estimate,
       roadBlocked: analysis.road_blocked,
@@ -220,6 +221,7 @@ export async function runIncidentWorkflow(incidentId: string) {
         longitude: refreshed!.longitude,
         aiSeverity: refreshed!.aiSeverity,
         aiPeopleAffected: refreshed!.aiPeopleAffected,
+        aiRoadBlocked: refreshed!.aiRoadBlocked,
       },
       resources
     )
@@ -352,7 +354,11 @@ export async function rejectAssignment(approvalId: string, reviewerId: string, r
 // RESOURCE ASSIGNMENT + CONFLICT DETECTION
 // ───────────────────────────────────────────────
 export async function assignResource(incidentId: string, resourceId: string, assignedById?: string, reason?: string) {
-  const resource = await db.resource.findUnique({ where: { id: resourceId } })
+  const [incident, resource] = await Promise.all([
+    db.incident.findUnique({ where: { id: incidentId } }),
+    db.resource.findUnique({ where: { id: resourceId } }),
+  ])
+  if (!incident) throw new Error('Incident not found')
   if (!resource) throw new Error('Resource not found')
   if (resource.status === 'UNAVAILABLE') {
     await pushNotification({
@@ -485,6 +491,7 @@ export async function reassignIncident(incidentId: string, reason: string, exclu
       longitude: incident.longitude,
       aiSeverity: incident.aiSeverity,
       aiPeopleAffected: incident.aiPeopleAffected,
+      aiRoadBlocked: incident.aiRoadBlocked,
     },
     resources
   )
@@ -584,16 +591,70 @@ export async function advanceResponse(incidentId: string, stage: 'ACK' | 'START'
     await recordIncidentEvent(incidentId, 'RESPONSE_ACKNOWLEDGED', { label: 'Responder acknowledged assignment' })
     await broadcastStatusUpdate({ incidentId, incidentCode: incident.incidentCode, status: 'IN_PROGRESS', publicMessage: 'Your response team has acknowledged the assignment and is preparing to depart.', previousStatus: incident.status })
     await notifyCitizen(incidentId, 'INFO', 'Your response team has acknowledged the assignment and is preparing to depart.')
+    await dispatchIncidentEventNotification(incidentId, 'ASSIGNMENT_CHANGED', {
+      title: `Responder Acknowledged: ${incident.incidentCode}`,
+      message: `Response team acknowledged assignment for ${incident.type.replace(/_/g, ' ')} at ${incident.location}.`,
+      emailSubject: `RESOURCEFLOW AI – Responder Acknowledged: ${incident.incidentCode}`,
+      emailHtml: renderIncidentEventEmail({
+        incidentCode: incident.incidentCode,
+        incidentType: incident.type.replace(/_/g, ' '),
+        location: incident.location,
+        status: 'IN_PROGRESS',
+        riskLevel: incident.riskLevel,
+        riskScore: incident.riskScore,
+        timestamp: now.toISOString(),
+        actionRequired: 'Responder acknowledged assignment — preparing departure',
+      }, 'Responder Acknowledged').html,
+      officerOnly: false,
+    })
   } else if (stage === 'START' && !incident.startedAt) {
     await db.incident.update({ where: { id: incidentId }, data: { startedAt: now, status: 'IN_PROGRESS' } })
+    if (incident.assignedResourceId) {
+      await db.resource.update({ where: { id: incident.assignedResourceId }, data: { status: 'EN_ROUTE', lastUpdated: now } })
+    }
     await recordIncidentEvent(incidentId, 'RESPONSE_STARTED', { label: 'Responder en route' })
     await broadcastStatusUpdate({ incidentId, incidentCode: incident.incidentCode, status: 'IN_PROGRESS', publicMessage: 'Your response team is en route to the incident.', previousStatus: incident.status })
     await notifyCitizen(incidentId, 'INFO', 'Your response team is en route to the incident.')
+    await dispatchIncidentEventNotification(incidentId, 'ASSIGNMENT_CHANGED', {
+      title: `Responder En Route: ${incident.incidentCode}`,
+      message: `Response team is en route to ${incident.type.replace(/_/g, ' ')} at ${incident.location}.`,
+      emailSubject: `RESOURCEFLOW AI – Responder En Route: ${incident.incidentCode}`,
+      emailHtml: renderIncidentEventEmail({
+        incidentCode: incident.incidentCode,
+        incidentType: incident.type.replace(/_/g, ' '),
+        location: incident.location,
+        status: 'IN_PROGRESS',
+        riskLevel: incident.riskLevel,
+        riskScore: incident.riskScore,
+        timestamp: now.toISOString(),
+        actionRequired: 'Response team en route to scene coordinates',
+      }, 'Responder En Route').html,
+      officerOnly: false,
+    })
   } else if (stage === 'ARRIVE' && !incident.arrivedAt) {
     await db.incident.update({ where: { id: incidentId }, data: { arrivedAt: now, status: 'IN_PROGRESS' } })
+    if (incident.assignedResourceId) {
+      await db.resource.update({ where: { id: incident.assignedResourceId }, data: { status: 'ON_SCENE', lastUpdated: now } })
+    }
     await recordIncidentEvent(incidentId, 'RESPONSE_ARRIVED', { label: 'Responder on scene' })
     await broadcastStatusUpdate({ incidentId, incidentCode: incident.incidentCode, status: 'IN_PROGRESS', publicMessage: 'Your response team has arrived on scene. Work is in progress.', previousStatus: incident.status })
     await notifyCitizen(incidentId, 'INFO', 'Your response team has arrived on scene. Work is in progress.')
+    await dispatchIncidentEventNotification(incidentId, 'ASSIGNMENT_CHANGED', {
+      title: `Responder On Scene: ${incident.incidentCode}`,
+      message: `Response team has arrived on scene for ${incident.type.replace(/_/g, ' ')} at ${incident.location}.`,
+      emailSubject: `RESOURCEFLOW AI – Responder On Scene: ${incident.incidentCode}`,
+      emailHtml: renderIncidentEventEmail({
+        incidentCode: incident.incidentCode,
+        incidentType: incident.type.replace(/_/g, ' '),
+        location: incident.location,
+        status: 'IN_PROGRESS',
+        riskLevel: incident.riskLevel,
+        riskScore: incident.riskScore,
+        timestamp: now.toISOString(),
+        actionRequired: 'Responder team on scene — active emergency operations underway',
+      }, 'Responder On Scene').html,
+      officerOnly: false,
+    })
   } else if (stage === 'RESOLVE') {
     await resolveIncident(incidentId, byUserId)
   }
@@ -650,26 +711,59 @@ export async function resolveIncident(incidentId: string, byUserId?: string) {
 export async function generateIncidentReport(incidentId: string) {
   const incident = await db.incident.findUnique({
     where: { id: incidentId },
-    include: { events: { orderBy: { createdAt: 'asc' } }, assignments: true },
+    include: {
+      events: { orderBy: { createdAt: 'asc' } },
+      assignments: { include: { resource: true } },
+      approvals: { include: { reviewer: { select: { name: true, email: true } } } },
+    },
   })
   if (!incident) return
+
+  const totalTimeMin = incident.resolvedAt
+    ? Math.max(1, Math.round((incident.resolvedAt.getTime() - incident.createdAt.getTime()) / 60000))
+    : 0
+
+  const responseTimeMin = incident.acknowledgedAt && incident.assignedAt
+    ? Math.max(1, Math.round((incident.acknowledgedAt.getTime() - incident.assignedAt.getTime()) / 60000))
+    : null
+
+  const notifCount = await db.notificationLog.count({ where: { incidentId } })
+
   const report = {
     incidentCode: incident.incidentCode,
     type: incident.type,
     description: incident.description,
     location: incident.location,
     coordinates: { lat: incident.latitude, lng: incident.longitude },
-    summary: `Incident resolved after ${incident.resolvedAt ? Math.round((incident.resolvedAt.getTime() - incident.createdAt.getTime()) / 60000) : 0} minutes.`,
-    timeline: incident.events.map((e) => ({ t: e.createdAt, type: e.eventType, data: JSON.parse(e.data) })),
-    resourcesUsed: incident.assignments.filter((a) => a.status !== 'CANCELLED').map((a) => a.resourceId),
-    responseTime: incident.acknowledgedAt && incident.assignedAt
-      ? Math.round((incident.acknowledgedAt.getTime() - incident.assignedAt.getTime()) / 60000)
-      : null,
-    resolutionTime: incident.resolvedAt ? Math.round((incident.resolvedAt.getTime() - incident.createdAt.getTime()) / 60000) : null,
+    aiSeverity: incident.aiSeverity,
+    aiPeopleAffected: incident.aiPeopleAffected,
+    riskScore: incident.riskScore,
+    riskLevel: incident.riskLevel,
+    summary: `${incident.type.replace(/_/g, ' ')} incident resolved in ${totalTimeMin} minutes with response team deployment.`,
+    timeline: incident.events.map((e) => {
+      let d: any = {}
+      try { d = JSON.parse(e.data) } catch {}
+      return { t: e.createdAt, type: e.eventType, label: d?.label || e.eventType }
+    }),
+    resourcesDeployed: incident.assignments.map((a) => ({
+      resourceCode: a.resource.resourceCode,
+      name: a.resource.name,
+      type: a.resource.type,
+      status: a.status,
+      assignedAt: a.assignedAt,
+    })),
+    approvals: incident.approvals.map((ap) => ({
+      decision: ap.decision,
+      reviewedBy: ap.reviewer?.name || 'Authorized Officer',
+      reviewedAt: ap.reviewedAt,
+      reason: ap.reason,
+    })),
+    responseTimeMin,
+    resolutionTimeMin: totalTimeMin,
     delays: incident.events.filter((e) => e.eventType === 'RESPONSE_DELAYED').length,
-    escalations: incident.escalationLevel,
-    finalOutcome: 'Resolved',
-    aiRecommendations: 'See AI recommendation log',
+    escalationLevel: incident.escalationLevel,
+    notificationsDispatched: notifCount,
+    finalOutcome: 'Scene stabilized — incident resolved successfully',
     generatedAt: new Date().toISOString(),
   }
   await db.generatedReport.upsert({

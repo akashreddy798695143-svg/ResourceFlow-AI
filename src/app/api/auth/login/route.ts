@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
     if (!user) return err('Invalid credentials', 401)
     if (!user.active) return err('Account inactive — contact admin', 403)
 
+    if (!user.passwordHash) return err('Invalid credentials', 401)
     const valid = await verifyPassword(user.passwordHash, String(password))
     if (!valid) return err('Invalid credentials', 401)
 

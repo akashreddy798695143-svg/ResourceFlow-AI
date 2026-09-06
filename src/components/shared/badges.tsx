@@ -66,6 +66,10 @@ const TYPE_LABELS: Record<IncidentType, string> = {
   FIRE: 'Fire',
   MEDICAL: 'Medical',
   INFRASTRUCTURE: 'Infrastructure',
+  BUILDING_COLLAPSE: 'Building Collapse',
+  FOREST_FIRE: 'Forest Fire',
+  HEAVY_RAINFALL: 'Heavy Rainfall',
+  INDUSTRIAL_ACCIDENT: 'Industrial Accident',
   OTHER: 'Other',
 }
 

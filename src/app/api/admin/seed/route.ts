@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { hashPassword } from '@/lib/auth'
 import { ok } from '@/lib/api'
+import type { ResourceType } from '@prisma/client'
 
 // POST /api/admin/seed — idempotent seed of demo users + resources
 export async function POST(_req: NextRequest) {
@@ -24,7 +25,7 @@ export async function POST(_req: NextRequest) {
   // Seed resources if none exist
   const existingResources = await db.resource.count()
   if (existingResources === 0) {
-    const resources = [
+    const resources: Array<{ resourceCode: string; name: string; type: ResourceType; latitude: number; longitude: number; capacity: number }> = [
       { resourceCode: 'R14', name: 'Rescue Team Alpha', type: 'RESCUE_TEAM', latitude: 28.6140, longitude: 77.2100, capacity: 12 },
       { resourceCode: 'R22', name: 'Rescue Team Bravo', type: 'RESCUE_TEAM', latitude: 28.6200, longitude: 77.2200, capacity: 10 },
       { resourceCode: 'A03', name: 'Ambulance 03', type: 'AMBULANCE', latitude: 28.6150, longitude: 77.2150, capacity: 2 },

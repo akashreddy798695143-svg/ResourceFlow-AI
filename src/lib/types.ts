@@ -4,7 +4,9 @@ export type Role = 'CITIZEN' | 'RESPONDER' | 'DISASTER_OFFICER' | 'ADMIN'
 
 export type IncidentType =
   | 'FLOOD' | 'CYCLONE' | 'EARTHQUAKE' | 'LANDSLIDE' | 'ROAD_BLOCKAGE'
-  | 'FIRE' | 'MEDICAL' | 'INFRASTRUCTURE' | 'OTHER'
+  | 'FIRE' | 'MEDICAL' | 'INFRASTRUCTURE'
+  | 'BUILDING_COLLAPSE' | 'FOREST_FIRE' | 'HEAVY_RAINFALL' | 'INDUSTRIAL_ACCIDENT'
+  | 'OTHER'
 
 export type IncidentStatus =
   | 'NEW' | 'ANALYZING' | 'VERIFICATION' | 'PRIORITIZED' | 'AWAITING_APPROVAL'
@@ -77,6 +79,8 @@ export interface Incident {
   arrivedAt: string | null
   resolvedAt: string | null
   escalationLevel: number
+  resolutionEmailSent?: boolean
+  resolutionEmailSentAt?: string | null
   reportedById: string
   reportedBy?: { name: string }
   events?: IncidentEvent[]
@@ -133,7 +137,20 @@ export interface Approval {
   reason: string | null
   reviewedAt: string | null
   createdAt: string
-  incident?: { incidentCode: string; type: IncidentType; location: string; riskLevel: RiskLevel; riskScore: number }
+  incident?: {
+    incidentCode: string
+    type: IncidentType
+    location: string
+    riskLevel: RiskLevel
+    riskScore: number
+    description?: string
+    originalDescription?: string | null
+    language?: string | null
+    inputMethod?: string | null
+    citizenName?: string | null
+    citizenEmail?: string | null
+    citizenPhone?: string | null
+  }
 }
 
 export interface AIRecommendation {

@@ -7,7 +7,7 @@ import { broadcastEvent } from '@/lib/events'
 import type { SimulationRun } from '@prisma/client'
 
 export interface SimConfig {
-  scenario: 'FLOOD' | 'CYCLONE' | 'EARTHQUAKE' | 'LANDSLIDE'
+  scenario: string
   options: {
     ambulanceUnavailable?: boolean
     rescueTeamUnavailable?: boolean

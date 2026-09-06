@@ -10,6 +10,7 @@ export interface RiskResult {
 }
 
 export function calculateRisk(input: {
+  incidentType?: string | null
   severity?: string | null
   peopleAffected?: number | null
   roadBlocked?: boolean | null
@@ -22,12 +23,30 @@ export function calculateRisk(input: {
   const reasons: string[] = []
   let score = 0
 
+  // Disaster Type Baseline Hazard (0-10)
+  if (input.incidentType === 'BUILDING_COLLAPSE') {
+    score += 10
+    reasons.push('High-risk event: Building Collapse with severe structural entrapment')
+  } else if (input.incidentType === 'INDUSTRIAL_ACCIDENT') {
+    score += 10
+    reasons.push('High-risk event: Industrial Accident with chemical/toxic hazard')
+  } else if (input.incidentType === 'EARTHQUAKE') {
+    score += 8
+    reasons.push('Major geological hazard: Earthquake with aftershock threat')
+  } else if (input.incidentType === 'LANDSLIDE') {
+    score += 7
+    reasons.push('Terrain hazard: Landslide with slope instability')
+  } else if (input.incidentType === 'FOREST_FIRE') {
+    score += 7
+    reasons.push('Rapid-spread fire hazard: Forest Fire')
+  }
+
   // Severity (0-30)
   const sevMap: Record<string, number> = { LOW: 6, MEDIUM: 14, HIGH: 22, CRITICAL: 30 }
   const sev = input.severity || 'MEDIUM'
   const sevScore = sevMap[sev] ?? 14
   score += sevScore
-  if (sevScore >= 22) reasons.push(`High severity (${sev})`)
+  if (sevScore >= 22) reasons.push(`High severity classification (${sev})`)
 
   // People affected (0-20)
   const people = input.peopleAffected ?? 0

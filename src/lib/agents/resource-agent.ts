@@ -1,5 +1,5 @@
 // Resource Agent — optimises resource assignment for an incident.
-// Considers distance, ETA, type match, capacity, severity, current workload, availability.
+// Considers distance, ETA, type match, capacity, severity, road blockage, and availability.
 // Falls back to a deterministic optimizer if the AI is unavailable.
 
 import { askAI, extractJson } from '@/lib/ai-client'
@@ -33,10 +33,14 @@ export interface ResourceRecommendation {
 const ELIGIBLE: Record<string, ResourceType[]> = {
   FLOOD: ['RESCUE_TEAM', 'EMERGENCY_VEHICLE', 'FOOD_SUPPLY', 'WATER_SUPPLY', 'MEDICAL_SUPPLY'],
   CYCLONE: ['RESCUE_TEAM', 'EMERGENCY_VEHICLE', 'MEDICAL_SUPPLY', 'FOOD_SUPPLY'],
-  EARTHQUAKE: ['RESCUE_TEAM', 'MEDICAL_SUPPLY', 'AMBULANCE', 'EMERGENCY_VEHICLE'],
-  LANDSLIDE: ['RESCUE_TEAM', 'EMERGENCY_VEHICLE', 'MEDICAL_SUPPLY'],
+  EARTHQUAKE: ['RESCUE_TEAM', 'AMBULANCE', 'MEDICAL_SUPPLY', 'EMERGENCY_VEHICLE'],
+  LANDSLIDE: ['RESCUE_TEAM', 'EMERGENCY_VEHICLE', 'AMBULANCE', 'MEDICAL_SUPPLY'],
   ROAD_BLOCKAGE: ['EMERGENCY_VEHICLE', 'RESCUE_TEAM'],
   FIRE: ['FIRE_TEAM', 'AMBULANCE', 'EMERGENCY_VEHICLE'],
+  BUILDING_COLLAPSE: ['RESCUE_TEAM', 'AMBULANCE', 'EMERGENCY_VEHICLE', 'MEDICAL_SUPPLY'],
+  FOREST_FIRE: ['FIRE_TEAM', 'EMERGENCY_VEHICLE', 'WATER_SUPPLY', 'AMBULANCE'],
+  HEAVY_RAINFALL: ['RESCUE_TEAM', 'EMERGENCY_VEHICLE', 'WATER_SUPPLY', 'FOOD_SUPPLY'],
+  INDUSTRIAL_ACCIDENT: ['FIRE_TEAM', 'AMBULANCE', 'MEDICAL_SUPPLY', 'EMERGENCY_VEHICLE'],
   MEDICAL: ['AMBULANCE', 'MEDICAL_SUPPLY'],
   INFRASTRUCTURE: ['EMERGENCY_VEHICLE', 'RESCUE_TEAM'],
   OTHER: ['RESCUE_TEAM', 'EMERGENCY_VEHICLE'],
@@ -54,12 +58,14 @@ export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: numb
 }
 
 // ETA estimate: assume 40 km/h average response speed → minutes = dist/speed*60
-export function estimateEtaMinutes(distanceKm: number): number {
-  return Math.max(2, Math.round((distanceKm / 40) * 60))
+export function estimateEtaMinutes(distanceKm: number, roadBlocked: boolean = false): number {
+  const baseMinutes = (distanceKm / 40) * 60
+  const factor = roadBlocked ? 1.4 : 1.0 // 40% detour penalty when access road is impaired
+  return Math.max(2, Math.round(baseMinutes * factor))
 }
 
 export async function recommendResource(
-  incident: Pick<Incident, 'id' | 'type' | 'latitude' | 'longitude' | 'aiSeverity' | 'aiPeopleAffected'>,
+  incident: Pick<Incident, 'id' | 'type' | 'latitude' | 'longitude' | 'aiSeverity' | 'aiPeopleAffected' | 'aiRoadBlocked'>,
   resources: Resource[]
 ): Promise<ResourceRecommendation> {
   const eligible = ELIGIBLE[incident.type] || ELIGIBLE.OTHER
@@ -69,18 +75,20 @@ export async function recommendResource(
     return {
       recommended_resource: null,
       alternative_resources: [],
-      reason: 'No eligible resources currently available — escalation recommended.',
+      reason: 'No eligible resources currently available — manual dispatch or mutual aid escalation required.',
       source: 'fallback',
     }
   }
 
+  const roadBlocked = Boolean(incident.aiRoadBlocked) || incident.type === 'ROAD_BLOCKAGE' || incident.type === 'LANDSLIDE'
+
   // Score each candidate deterministically
   const scored = candidates.map((r) => {
     const distance = haversineKm(incident.latitude, incident.longitude, r.latitude, r.longitude)
-    const eta = r.eta ?? estimateEtaMinutes(distance)
-    const severityBoost = (incident.aiSeverity || 'MEDIUM') === 'CRITICAL' ? 1.2 : 1
-    const capacityFactor = Math.max(0.5, Math.min(1.5, r.capacity / 50))
-    // Lower score is better (cost). Smaller distance/eta is better; capacity helps.
+    const eta = r.eta ?? estimateEtaMinutes(distance, roadBlocked)
+    const severityBoost = (incident.aiSeverity || 'MEDIUM') === 'CRITICAL' ? 1.3 : 1.0
+    const capacityFactor = Math.max(0.6, Math.min(1.6, r.capacity / 40))
+    // Lower score is better. Smaller distance & ETA are rewarded; capacity helps mitigate overload.
     const score = (eta / capacityFactor) * severityBoost
     return { resource: r, distance, eta, score }
   }).sort((a, b) => a.score - b.score)
@@ -89,8 +97,8 @@ export async function recommendResource(
   const alternatives = scored.slice(1, 4)
 
   // Try to enrich the reason with the AI for explainability — fallback to heuristic reason.
-  const systemPrompt = `You are a disaster resource-optimisation agent. Given an incident and a recommended resource, return STRICT JSON ONLY with a short, human-readable reason field explaining why this resource was chosen. Schema: {"reason": "<string>", "alt_reasons": ["<string>"]}`
-  const userPrompt = `Incident: type=${incident.type}, severity=${incident.aiSeverity}, people~${incident.aiPeopleAffected}
+  const systemPrompt = `You are a disaster resource-optimisation agent. Given an incident and a recommended resource, return STRICT JSON ONLY with a clear, professional reason field explaining why this resource was chosen (considering distance, ETA, capacity, and incident urgency). Schema: {"reason": "<string>", "alt_reasons": ["<string>"]}`
+  const userPrompt = `Incident: type=${incident.type}, severity=${incident.aiSeverity}, people~${incident.aiPeopleAffected}, roadBlocked=${roadBlocked}
 Recommended: ${recommended.resource.resourceCode} (${recommended.resource.name}, type=${recommended.resource.type}, ETA=${recommended.eta}min, distance=${recommended.distance.toFixed(1)}km, capacity=${recommended.resource.capacity})
 Alternatives: ${alternatives.map((a) => a.resource.resourceCode).join(', ')}`
 
@@ -125,7 +133,8 @@ Alternatives: ${alternatives.map((a) => a.resource.resourceCode).join(', ')}`
   }
 
   // Fallback reason — deterministic
-  const reason = `ETA ${recommended.eta} minutes, available, suitable capacity (${recommended.resource.capacity}), closest eligible ${recommended.resource.type.replace('_', ' ').toLowerCase()} team.`
+  const detourNote = roadBlocked ? ' (includes road detour estimate)' : ''
+  const reason = `Assigned ${recommended.resource.resourceCode}: Closest eligible ${recommended.resource.type.replace(/_/g, ' ').toLowerCase()} unit (${recommended.distance.toFixed(1)}km, ETA ~${recommended.eta} min${detourNote}) with matching capacity of ${recommended.resource.capacity} personnel.`
   return {
     recommended_resource: {
       id: recommended.resource.id,
@@ -144,7 +153,7 @@ Alternatives: ${alternatives.map((a) => a.resource.resourceCode).join(', ')}`
       type: a.resource.type,
       eta_minutes: a.eta,
       distance_km: Number(a.distance.toFixed(1)),
-      reason: `Backup option — ETA ${a.eta}min, ${a.distance.toFixed(1)}km`,
+      reason: `Backup option — ETA ${a.eta}min, ${a.distance.toFixed(1)}km (capacity ${a.resource.capacity})`,
     })),
     reason,
     source: 'fallback',

@@ -30,13 +30,17 @@ const LANGUAGES = [
 
 const INCIDENT_TYPES = [
   { value: 'FLOOD', label: 'Flood' },
-  { value: 'CYCLONE', label: 'Cyclone' },
   { value: 'EARTHQUAKE', label: 'Earthquake' },
   { value: 'LANDSLIDE', label: 'Landslide' },
   { value: 'ROAD_BLOCKAGE', label: 'Road Blockage' },
-  { value: 'FIRE', label: 'Fire' },
-  { value: 'MEDICAL', label: 'Medical' },
-  { value: 'INFRASTRUCTURE', label: 'Infrastructure' },
+  { value: 'BUILDING_COLLAPSE', label: 'Building Collapse' },
+  { value: 'FOREST_FIRE', label: 'Forest Fire' },
+  { value: 'HEAVY_RAINFALL', label: 'Heavy Rainfall' },
+  { value: 'INDUSTRIAL_ACCIDENT', label: 'Industrial Accident' },
+  { value: 'CYCLONE', label: 'Cyclone' },
+  { value: 'FIRE', label: 'Urban / Residential Fire' },
+  { value: 'MEDICAL', label: 'Medical Emergency' },
+  { value: 'INFRASTRUCTURE', label: 'Infrastructure Failure' },
   { value: 'OTHER', label: 'Other' },
 ]
 
@@ -436,7 +440,7 @@ export function ReportIncidentView() {
                   {/* Mini Leaflet map */}
                   <MiniMap lat={gps.lat} lng={gps.lng} />
                   <div className="flex gap-2 pt-1">
-                    <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={requestGps} disabled={gpsStatus === 'requesting'}>
+                    <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={requestGps}>
                       <RefreshCw className="h-3 w-3" /> Retry Location
                     </Button>
                     <Button type="button" size="sm" variant="ghost" className="gap-1.5" onClick={() => setMapPicker(true)}>

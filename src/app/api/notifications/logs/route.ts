@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth, handleAuthError } from '@/lib/auth'
 import { ok, err } from '@/lib/api'
-import { maskEmail, maskPhone } from '@/lib/services/email-service'
+import { maskEmail } from '@/lib/services/email-service'
 import { maskPhone as smsMaskPhone } from '@/lib/services/sms-service'
 
 // GET /api/notifications/logs
