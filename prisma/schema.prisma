@@ -29,8 +29,151 @@ model User {
   notificationLogs   NotificationLog[]
   otpVerifications   OtpVerification[]
   resourceOps        ResourceAssignment[]
+  operationalObservations OperationalObservation[]
+  aiInsights         AiInsight[]            @relation("AiInsights")
+  missingPersonReports MissingPerson[]      @relation("MissingPersonReports")
+  marketplaceListings  MarketplaceListing[] @relation("MarketplaceListings")
+  commsBlackouts      CommsBlackout[]        @relation("CommsBlackouts")
+  whatIfRuns          WhatIfRun[]            @relation("WhatIfRuns")
+  safetyContacts      SafetyContact[]        @relation("SafetyContacts")
+  safeCheckIns        SafeCheckIn[]          @relation("SafeCheckIns")
+  hazardReports       HazardReport[]         @relation("HazardReports")
+  shelterFeedback     ShelterFeedback[]      @relation("ShelterFeedback")
+  reliefRequests      ReliefRequest[]        @relation("ReliefRequests")
+  volunteerProfile    VolunteerRegistration? @relation("VolunteerProfile")
+  publishedAlerts     VerifiedAlert[]        @relation("VerifiedAlerts")
 
   @@index([phone])
+}
+
+// ─── Citizen Safety Suite ────────────────────────────────────────────────────
+// All citizen-owned records are scoped by owner FK; API layer enforces
+// owner-only access for CITIZEN role and officer access via explicit routes.
+
+model SafetyContact {
+  id        String   @id @default(cuid())
+  ownerId   String
+  name      String
+  phone     String
+  relation  String   @default("FAMILY")
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  owner     User     @relation("SafetyContacts", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+}
+
+model SafeCheckIn {
+  id           String   @id @default(cuid())
+  userId       String
+  isSafe       Boolean  @default(true)
+  message      String?
+  latitude     Float?
+  longitude    Float?
+  locationName String?
+  sharedWith   Json?    // Array of SafetyContact ids the status was shared with
+  createdAt    DateTime @default(now())
+  user         User     @relation("SafeCheckIns", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model HazardReport {
+  id            String       @id @default(cuid())
+  reportedById  String
+  hazardType    HazardType
+  description   String
+  location      String
+  latitude      Float
+  longitude     Float
+  severity      Severity     @default(MEDIUM)
+  status        HazardStatus @default(REPORTED)
+  aiCategory    String?
+  aiConfidence  Float?
+  aiSummary     String?
+  duplicateOfId String?
+  clusterKey    String?
+  confirmCount  Int          @default(1)
+  verified      Boolean      @default(false)
+  verifiedById  String?
+  verifiedAt    DateTime?
+  language      String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  reportedBy    User         @relation("HazardReports", fields: [reportedById], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([hazardType])
+  @@index([clusterKey])
+}
+
+model ShelterFeedback {
+  id            String       @id @default(cuid())
+  incidentId    String?
+  shelterName   String
+  status        ShelterStatus
+  occupancyPct  Int?
+  waitMinutes   Int?
+  suppliesNote  String?
+  reportedById  String
+  createdAt     DateTime     @default(now())
+  reportedBy    User         @relation("ShelterFeedback", fields: [reportedById], references: [id], onDelete: Cascade)
+
+  @@index([shelterName])
+  @@index([createdAt])
+}
+
+model ReliefRequest {
+  id           String              @id @default(cuid())
+  requestedById String
+  needType     ReliefNeedType
+  quantity     String?
+  urgency      Severity            @default(MEDIUM)
+  notes        String?
+  location     String
+  latitude     Float?
+  longitude    Float?
+  status       ReliefRequestStatus @default(OPEN)
+  incidentId   String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  requestedBy  User                @relation("ReliefRequests", fields: [requestedById], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([needType])
+}
+
+model VolunteerRegistration {
+  id            String         @id @default(cuid())
+  userId        String         @unique
+  skills        String
+  availability  String
+  areas         String?
+  hasTransport  Boolean        @default(false)
+  status        VolunteerStatus @default(PENDING)
+  verifiedSafe  Boolean        @default(false)
+  reviewedById  String?
+  reviewNote    String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  user          User           @relation("VolunteerProfile", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerifiedAlert {
+  id          String   @id @default(cuid())
+  title       String
+  body        String
+  severity    Severity @default(MEDIUM)
+  area        String?
+  incidentId  String?
+  active      Boolean  @default(true)
+  language    String?  // optional language hint for the feed
+  publishedById String
+  publishedBy User     @relation("VerifiedAlerts", fields: [publishedById], references: [id])
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+
+  @@index([active, createdAt])
 }
 
 model Incident {
@@ -86,6 +229,17 @@ model Incident {
   reportedBy             User                 @relation(fields: [reportedById], references: [id])
   events                 IncidentEvent[]
   assignments            ResourceAssignment[]
+  operationalObservations OperationalObservation[]
+  aiInsights             AiInsight[]
+  linksFrom              IncidentLink[] @relation("LinksFrom")
+  linksTo                IncidentLink[] @relation("LinksTo")
+  safeZones              SafeZone[]
+  corridors              EvacuationCorridor[]
+  shipments              Shipment[]
+  missingPersons         MissingPerson[]
+  marketplaceListings    MarketplaceListing[]
+  hospitals              Hospital[]
+  learningEntries        LearningEntry[]
 
   @@index([status])
   @@index([type])
@@ -395,4 +549,355 @@ enum SimulationStatus {
   RUNNING
   COMPLETED
   FAILED
+}
+
+// ─── Citizen Safety Suite enums ──────────────────────────────────────────────
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum HazardType {
+  FLOODING
+  BLOCKED_ROAD
+  DEBRIS
+  DOWNED_POWER_LINE
+  FIRE
+  STRUCTURAL_DAMAGE
+  LANDSLIDE
+  OTHER
+}
+
+enum HazardStatus {
+  REPORTED
+  CONFIRMED
+  RESOLVED
+  DISMISSED
+}
+
+enum ShelterStatus {
+  OPEN
+  CROWDED
+  FULL
+  CLOSED
+}
+
+enum ReliefNeedType {
+  FOOD
+  WATER
+  MEDICAL
+  SHELTER
+  CLOTHING
+  RESCUE
+  POWER
+  OTHER
+}
+
+enum ReliefRequestStatus {
+  OPEN
+  ACKNOWLEDGED
+  FULFILLED
+  CANCELLED
+}
+
+enum VolunteerStatus {
+  PENDING
+  APPROVED
+  ACTIVE
+  INACTIVE
+  REJECTED
+}
+
+// Versioned operational inputs; payload validated by the discriminated Zod schema.
+// Append-only observations retain provenance without altering dispatch records.
+model OperationalObservation {
+  id          String   @id @default(cuid())
+  incidentId  String
+  createdById String
+  kind        String
+  recordCode  String
+  payload     Json
+  simulated   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  @@index([incidentId, kind, recordCode, createdAt])
+}
+
+// ===== Advanced AI Command-Center models (SIH upgrade) =====
+
+// Generic store for per-incident AI insights: trust score, cascade detection,
+// crowd-movement risk, evidence analysis, conflict resolution, workload risk,
+// explainability, demand, safe zones, corridors, spoilage, blackout.
+model AiInsight {
+  id          String    @id @default(cuid())
+  incidentId  String?
+  feature     String
+  severity    RiskLevel @default(LOW)
+  confidence  Float?
+  payload     Json
+  source      String    @default("deterministic")
+  demo        Boolean   @default(false)
+  status      String    @default("ACTIVE")
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  incident    Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  createdBy   User?     @relation("AiInsights", fields: [createdById], references: [id])
+
+  @@index([feature, status])
+  @@index([incidentId])
+}
+
+// Directed relationship edge between two incidents (relationship graph + cascade).
+model IncidentLink {
+  id             String   @id @default(cuid())
+  fromIncidentId String
+  toIncidentId   String
+  relation       String
+  strength       Float    @default(0.5)
+  explanation    String?
+  source         String   @default("deterministic")
+  createdAt      DateTime @default(now())
+  fromIncident   Incident @relation("LinksFrom", fields: [fromIncidentId], references: [id], onDelete: Cascade)
+  toIncident     Incident @relation("LinksTo", fields: [toIncidentId], references: [id], onDelete: Cascade)
+
+  @@unique([fromIncidentId, toIncidentId, relation])
+  @@index([fromIncidentId])
+  @@index([toIncidentId])
+}
+
+// Dynamic safe-zone (shelter) generated from incident geography + capacity model.
+model SafeZone {
+  id         String    @id @default(cuid())
+  name       String
+  zoneCode   String    @unique
+  type       String
+  latitude   Float
+  longitude  Float
+  capacity   Int
+  occupancy  Int       @default(0)
+  riskLevel  RiskLevel @default(LOW)
+  status     String    @default("OPEN")
+  amenities  String?
+  incidentId String?
+  source     String    @default("deterministic")
+  demo       Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  incident   Incident? @relation(fields: [incidentId], references: [id])
+  corridors  EvacuationCorridor[]
+
+  @@index([status])
+}
+
+// Evacuation corridor plan between a hazard area and a safe zone.
+model EvacuationCorridor {
+  id              String    @id @default(cuid())
+  corridorCode    String    @unique
+  name            String
+  fromLabel       String
+  toSafeZoneId    String?
+  path            Json
+  distanceKm      Float
+  etaMinutes      Int
+  capacityPerHour Int
+  riskScore       Float
+  status          String    @default("PROPOSED")
+  incidentId      String?
+  source          String    @default("deterministic")
+  demo            Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  safeZone        SafeZone? @relation(fields: [toSafeZoneId], references: [id])
+  incident        Incident? @relation(fields: [incidentId], references: [id])
+
+  @@index([status])
+}
+
+// Perishable relief stock lot with spoilage prediction.
+model ResourceExpiry {
+  id             String       @id @default(cuid())
+  batchCode      String       @unique
+  name           String
+  type           ResourceType
+  quantity       Int
+  unit           String       @default("units")
+  storageSite    String
+  expiresAt      DateTime
+  spoilageRisk   Float?
+  recommendation String?
+  resourceId     String?
+  source         String       @default("deterministic")
+  demo           Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([expiresAt])
+}
+
+// Relief supply-chain shipment with step-level tracking.
+model Shipment {
+  id           String    @id @default(cuid())
+  shipmentCode String    @unique
+  description  String
+  origin       String
+  destination  String
+  incidentId   String?
+  status       String    @default("PREPARING")
+  currentStep  Int       @default(0)
+  eta          DateTime?
+  steps        Json
+  source       String    @default("deterministic")
+  demo         Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  incident     Incident? @relation(fields: [incidentId], references: [id])
+
+  @@index([status])
+}
+
+
+// Predictive demand forecast per region + resource type.
+model DemandForecast {
+  id              String       @id @default(cuid())
+  region          String
+  resourceType    ResourceType
+  horizonHours    Int          @default(24)
+  predictedDemand Int
+  currentSupply   Int
+  gap             Int
+  confidence      Float
+  source          String       @default("deterministic")
+  demo            Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+
+  @@index([region, resourceType])
+}
+
+// Missing-person report with AI priority scoring.
+model MissingPerson {
+  id               String    @id @default(cuid())
+  fullName         String
+  age              Int?
+  gender           String?
+  description      String?
+  lastSeenAt       DateTime?
+  lastSeenLocation String
+  latitude         Float?
+  longitude        Float?
+  contactName      String?
+  contactPhone     String?
+  medicalNeeds     Boolean   @default(false)
+  childOrElder     Boolean   @default(false)
+  priorityScore    Float?
+  status           String    @default("OPEN")
+  foundAt          DateTime?
+  incidentId       String?
+  reportedById     String
+  source           String    @default("deterministic")
+  demo             Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  reportedBy       User      @relation("MissingPersonReports", fields: [reportedById], references: [id])
+  incident         Incident? @relation(fields: [incidentId], references: [id])
+
+  @@index([status])
+}
+
+// Inter-agency marketplace listing (offer or request).
+model MarketplaceListing {
+  id            String       @id @default(cuid())
+  listingCode   String       @unique
+  kind          String       @default("OFFER")
+  agencyName    String
+  resourceType  ResourceType
+  quantity      Int
+  unit          String       @default("units")
+  pricePerUnit  Float?
+  notes         String?
+  status        String       @default("OPEN")
+  matchedWithId String?
+  incidentId    String?
+  listedById    String?
+  demo          Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  listedBy      User?        @relation("MarketplaceListings", fields: [listedById], references: [id])
+  incident      Incident?    @relation(fields: [incidentId], references: [id])
+
+  @@index([status])
+}
+
+// Hospital node for the load balancer.
+model Hospital {
+  id            String    @id @default(cuid())
+  name          String
+  latitude      Float
+  longitude     Float
+  totalBeds     Int
+  availableBeds Int
+  icuAvailable  Int       @default(0)
+  erLoadPct     Int       @default(0)
+  status        String    @default("ACCEPTING")
+  incidentId    String?
+  source        String    @default("demo")
+  demo          Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  incident      Incident? @relation(fields: [incidentId], references: [id])
+
+  @@index([status])
+}
+
+// Emergency communication blackout (network outage mode).
+model CommsBlackout {
+  id              String    @id @default(cuid())
+  mode            String    @default("PARTIAL")
+  reason          String
+  affectedRegions Json?
+  active          Boolean   @default(true)
+  startedById     String?
+  startedAt       DateTime  @default(now())
+  endsAt          DateTime?
+  demo            Boolean   @default(false)
+  startedBy       User?     @relation("CommsBlackouts", fields: [startedById], references: [id])
+
+  @@index([active])
+}
+
+// What-If disaster simulator run (parameterised, AI-enriched).
+model WhatIfRun {
+  id          String   @id @default(cuid())
+  name        String
+  params      Json
+  results     Json?
+  narrative   String?
+  source      String   @default("deterministic")
+  demo        Boolean  @default(false)
+  createdById String?
+  createdAt   DateTime @default(now())
+  createdBy   User?    @relation("WhatIfRuns", fields: [createdById], references: [id])
+
+  @@index([createdAt])
+}
+
+// Post-disaster AI learning loop entry.
+model LearningEntry {
+  id             String    @id @default(cuid())
+  incidentId     String?
+  category       String
+  lesson         String
+  recommendation String?
+  confidence     Float?
+  source         String    @default("deterministic")
+  status         String    @default("OPEN")
+  createdAt      DateTime  @default(now())
+  incident       Incident? @relation(fields: [incidentId], references: [id])
+
+  @@index([status])
 }

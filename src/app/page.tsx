@@ -9,14 +9,17 @@ import { LoginView } from '@/components/views/auth/login'
 import { RegisterView } from '@/components/views/auth/register'
 import { DashboardShell } from '@/components/views/dashboard-shell'
 import { CitizenDashboardView } from '@/components/views/citizen/dashboard'
+import { CitizenSafetyCenterView } from '@/components/views/citizen/safety-center'
 import { ReportIncidentView } from '@/components/views/citizen/report-incident'
 import { TrackIncidentView } from '@/components/views/citizen/track-incident'
 import { CommandCenterView } from '@/components/views/officer/command-center'
+import { CitizenIntelView } from '@/components/views/officer/citizen-intel'
 import { IncidentsListView } from '@/components/views/officer/incidents-list'
 import { IncidentDetailView } from '@/components/views/officer/incident-detail'
 import { ResourcesView } from '@/components/views/officer/resources'
 import { ApprovalsView } from '@/components/views/officer/approvals'
 import { SimulationCenterView } from '@/components/views/simulation/simulation-center'
+import { AdvancedCenterView } from '@/components/views/advanced/advanced-center'
 import { AnalyticsView } from '@/components/views/analytics'
 import { AuditLogsView } from '@/components/views/audit-logs'
 import { SettingsView } from '@/components/views/settings'
@@ -87,6 +90,7 @@ function Routed() {
 
   // Citizen views
   if (user.role === 'CITIZEN') {
+    if (route.startsWith('safety-center')) return <DashboardShell><CitizenSafetyCenterView /></DashboardShell>
     if (route.startsWith('report-incident')) return <DashboardShell><ReportIncidentView /></DashboardShell>
     if (route.startsWith('track-incident')) return <DashboardShell><TrackIncidentView /></DashboardShell>
     return <DashboardShell><CitizenDashboardView /></DashboardShell>
@@ -101,11 +105,13 @@ function Routed() {
 
   // Officer + Admin views
   if (route.startsWith('command-center')) return <DashboardShell><CommandCenterView /></DashboardShell>
+  if (route.startsWith('citizen-intel') && (user.role === 'DISASTER_OFFICER' || user.role === 'ADMIN')) return <DashboardShell><CitizenIntelView /></DashboardShell>
   if (route.startsWith('incidents/')) return <DashboardShell><IncidentDetailView /></DashboardShell>
   if (route.startsWith('incidents')) return <DashboardShell><IncidentsListView /></DashboardShell>
   if (route.startsWith('resources')) return <DashboardShell><ResourcesView /></DashboardShell>
   if (route.startsWith('approvals')) return <DashboardShell><ApprovalsView /></DashboardShell>
   if (route.startsWith('simulation')) return <DashboardShell><SimulationCenterView /></DashboardShell>
+  if (route.startsWith('ai-center')) return <DashboardShell><AdvancedCenterView /></DashboardShell>
   if (route.startsWith('analytics')) return <DashboardShell><AnalyticsView /></DashboardShell>
   if (route.startsWith('audit')) return <DashboardShell><AuditLogsView /></DashboardShell>
   if (route.startsWith('settings')) return <DashboardShell><SettingsView /></DashboardShell>

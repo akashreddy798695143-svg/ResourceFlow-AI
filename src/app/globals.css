@@ -44,15 +44,15 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  /* Light theme — clean neutral with amber primary */
-  --background: oklch(0.985 0 0);
+  --radius: 0.5rem;
+  /* Light theme — clean professional with emergency red primary */
+  --background: oklch(0.99 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.55 0.18 39);          /* amber-600 */
+  --primary: oklch(0.55 0.22 25);          /* emergency red */
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -63,55 +63,55 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.55 0.18 39);
-  --chart-1: oklch(0.646 0.222 41.116);
+  --ring: oklch(0.55 0.22 25);
+  --chart-1: oklch(0.55 0.22 25);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.55 0.18 39);
+  --sidebar-primary: oklch(0.55 0.22 25);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.55 0.18 39);
+  --sidebar-ring: oklch(0.55 0.22 25);
 }
 
 .dark {
-  /* Dark theme — government emergency command center (deep navy + amber) */
-  --background: oklch(0.145 0.025 255);     /* deep navy-slate */
+  /* Dark theme — professional emergency command center */
+  --background: oklch(0.12 0.02 255);      /* deep navy-slate */
   --foreground: oklch(0.96 0 0);
-  --card: oklch(0.19 0.022 255);
+  --card: oklch(0.16 0.02 255);
   --card-foreground: oklch(0.96 0 0);
-  --popover: oklch(0.19 0.022 255);
+  --popover: oklch(0.16 0.02 255);
   --popover-foreground: oklch(0.96 0 0);
-  --primary: oklch(0.7 0.17 60);           /* amber-500 */
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.25 0.025 255);
+  --primary: oklch(0.65 0.22 25);           /* emergency red */
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.22 0.02 255);
   --secondary-foreground: oklch(0.96 0 0);
-  --muted: oklch(0.25 0.025 255);
-  --muted-foreground: oklch(0.72 0 0);
-  --accent: oklch(0.30 0.025 255);
+  --muted: oklch(0.22 0.02 255);
+  --muted-foreground: oklch(0.65 0 0);
+  --accent: oklch(0.22 0.02 255);
   --accent-foreground: oklch(0.96 0 0);
-  --destructive: oklch(0.65 0.24 25);
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.7 0.17 60);
-  --chart-1: oklch(0.7 0.17 60);          /* amber */
-  --chart-2: oklch(0.65 0.18 145);        /* emerald */
-  --chart-3: oklch(0.55 0.2 255);         /* blue */
-  --chart-4: oklch(0.75 0.19 320);        /* magenta */
-  --chart-5: oklch(0.65 0.2 12);          /* red-orange */
-  --sidebar: oklch(0.11 0.025 255);       /* darker navy for sidebar */
+  --destructive: oklch(0.65 0.22 25);
+  --border: oklch(0.25 0.02 255);
+  --input: oklch(0.25 0.02 255);
+  --ring: oklch(0.65 0.22 25);
+  --chart-1: oklch(0.65 0.22 25);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.14 0.02 255);
   --sidebar-foreground: oklch(0.96 0 0);
-  --sidebar-primary: oklch(0.7 0.17 60);
-  --sidebar-primary-foreground: oklch(0.145 0 0);
-  --sidebar-accent: oklch(0.25 0.025 255);
+  --sidebar-primary: oklch(0.65 0.22 25);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.22 0.02 255);
   --sidebar-accent-foreground: oklch(0.96 0 0);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.7 0.17 60);
+  --sidebar-border: oklch(0.25 0.02 255);
+  --sidebar-ring: oklch(0.65 0.22 25);
 }
 
 @layer base {
@@ -120,17 +120,8 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* Disaster-themed animated background — subtle, professional, not flashy */
-    background-image:
-      /* Flood: horizontal water ripples (blue, very subtle, slow wave) */
-      radial-gradient(ellipse 800px 120px at 20% 90%, oklch(0.45 0.08 240 / 0.04) 0%, transparent 60%),
-      radial-gradient(ellipse 600px 100px at 70% 95%, oklch(0.5 0.10 230 / 0.03) 0%, transparent 55%),
-      /* Earthquake: faint diagonal tremor lines (warm tone, very subtle) */
-      repeating-linear-gradient(135deg, transparent 0px, transparent 80px, oklch(0.6 0.05 30 / 0.015) 80px, oklch(0.6 0.05 30 / 0.015) 81px),
-      /* Road block: dashed yellow lines (horizontal, very faint) */
-      repeating-linear-gradient(90deg, transparent 0px, transparent 120px, oklch(0.7 0.12 80 / 0.012) 120px, oklch(0.7 0.12 80 / 0.012) 140px, transparent 140px, transparent 240px),
-      /* Base gradient: deep navy with amber glow at top */
-      linear-gradient(180deg, oklch(0.16 0.03 260) 0%, oklch(0.145 0.025 255) 50%, oklch(0.13 0.02 250) 100%);
+    /* Subtle professional background */
+    background-image: linear-gradient(180deg, var(--background) 0%, oklch(0.11 0.02 255) 100%);
     background-attachment: fixed;
   }
 }
@@ -153,9 +144,9 @@
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background: rgba(9, 24, 32, 0.97);
+  background: oklch(0.14 0.02 255 / 0.97);
   color: var(--foreground);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(160, 216, 211, 0.08);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(18px);
   animation: rf-ai-in 220ms ease-out both;
 }
@@ -165,7 +156,7 @@
   justify-content: space-between;
   padding: 0.75rem;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(90deg, rgba(240, 138, 75, 0.13), transparent 65%);
+  background: linear-gradient(90deg, oklch(0.65 0.22 25 / 0.15), transparent 65%);
 }
 .rf-ai-icon {
   display: grid;
@@ -174,7 +165,7 @@
   height: 2rem;
   border-radius: 0.5rem;
   color: var(--primary);
-  background: rgba(240, 138, 75, 0.15);
+  background: oklch(0.65 0.22 25 / 0.15);
 }
 .rf-ai-messages {
   display: flex;
@@ -229,23 +220,23 @@
 
 /* Photo-led landing atmosphere; the app itself keeps its command-center theme. */
 .rf-landing {
-  --background: #07141b;
-  --foreground: #e7f1ee;
-  --card: rgba(12, 31, 40, 0.88);
-  --card-foreground: #e7f1ee;
-  --popover: #0c1f28;
-  --popover-foreground: #e7f1ee;
-  --primary: #f08a4b;
-  --primary-foreground: #08161d;
-  --secondary: #16343d;
-  --secondary-foreground: #dcece8;
-  --muted: #12303a;
-  --muted-foreground: #9cb2b5;
-  --accent: #19404a;
-  --accent-foreground: #e7f1ee;
-  --border: rgba(176, 218, 214, 0.16);
-  --input: rgba(176, 218, 214, 0.18);
-  --ring: #f08a4b;
+  --background: #0a1628;
+  --foreground: #e8f0f5;
+  --card: rgba(15, 35, 50, 0.88);
+  --card-foreground: #e8f0f5;
+  --popover: #0f2332;
+  --popover-foreground: #e8f0f5;
+  --primary: #e04a3a;
+  --primary-foreground: #ffffff;
+  --secondary: #1a3a4a;
+  --secondary-foreground: #dce8ed;
+  --muted: #153040;
+  --muted-foreground: #8aa0a8;
+  --accent: #1d4555;
+  --accent-foreground: #e8f0f5;
+  --border: rgba(160, 200, 210, 0.16);
+  --input: rgba(160, 200, 210, 0.18);
+  --ring: #e04a3a;
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -313,8 +304,8 @@
   pointer-events: none;
   opacity: 0.22;
   background-image:
-    linear-gradient(rgba(160, 216, 211, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(160, 216, 211, 0.08) 1px, transparent 1px);
+    linear-gradient(rgba(160, 200, 210, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(160, 200, 210, 0.08) 1px, transparent 1px);
   background-size: 72px 72px;
   mask-image: linear-gradient(90deg, black, transparent 72%);
   animation: rf-grid-drift 24s linear infinite;
@@ -326,7 +317,7 @@
   bottom: 0;
   left: 8%;
   width: 1px;
-  background: linear-gradient(transparent, rgba(211, 93, 50, 0.8), transparent);
+  background: linear-gradient(transparent, rgba(224, 74, 58, 0.8), transparent);
   animation: rf-signal-sweep 9s ease-in-out infinite;
 }
 .rf-reveal {
@@ -377,7 +368,7 @@
 }
 .rf-feature-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(211, 93, 50, 0.45);
+  border-color: rgba(224, 74, 58, 0.45);
   box-shadow: 0 16px 32px rgba(23, 43, 53, 0.1);
 }
 .rf-feature-card:hover .rf-feature-image { transform: scale(1.06); opacity: 1; }
@@ -407,7 +398,7 @@
   z-index: -1;
   pointer-events: none;
   opacity: 0.3;
-  background: repeating-linear-gradient(115deg, transparent 0 110px, oklch(0.7 0.17 60 / 0.025) 110px 111px);
+  background: repeating-linear-gradient(115deg, transparent 0 110px, oklch(0.65 0.22 25 / 0.025) 110px 111px);
   animation: rf-app-drift 30s linear infinite;
 }
 .rf-app-main > div { animation: rf-reveal 0.55s ease-out both; }

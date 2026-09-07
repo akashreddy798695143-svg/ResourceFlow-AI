@@ -15,6 +15,7 @@ import { sendResolutionEmails } from '@/lib/workflows/email-workflow'
 import { sendAnalysisReport } from '@/lib/services/analysis-report-service'
 import { dispatchNotification, getUserRecipient, getUsersByRole } from '@/lib/services/notification-service'
 import { renderIncidentEventEmail, renderCitizenIncidentEmail } from '@/lib/services/email-templates'
+import { runAdvancedAnalysis, runLearningLoopForResolved } from '@/lib/workflows/advanced-pipeline'
 import type { NotificationType } from '@prisma/client'
 
 // Helper: create a notification targeted to the citizen who reported the incident.
@@ -155,6 +156,9 @@ export async function runIncidentWorkflow(incidentId: string) {
       newState: `severity=${analysis.severity}, source=${analysis.source}`,
       reason: 'AI incident analysis',
     })
+    // Advanced AI pipeline (SIH): trust score, crowd risk, evidence analysis —
+    // fire-and-forget, never blocks the main workflow.
+    void runAdvancedAnalysis(incidentId).catch(() => {})
     // Dispatch the AI analysis report to authorized officers (SMS summary + full HTML email)
     // Internal officer-only information (AI confidence, risk factors, recommended resources)
     // is NEVER sent to citizens.
@@ -705,6 +709,8 @@ export async function resolveIncident(incidentId: string, byUserId?: string) {
   // Automated resolution email — runs after the report is generated.
   // Idempotent (incident.resolutionEmailSent guard). Failures never roll back resolution.
   await sendResolutionEmails(incidentId, byUserId)
+  // Advanced AI learning loop (SIH): post-disaster lessons from this resolution.
+  void runLearningLoopForResolved().catch(() => {})
 }
 
 // Generate an automatic incident report after resolution

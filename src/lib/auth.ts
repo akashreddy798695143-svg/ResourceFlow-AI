@@ -83,15 +83,15 @@ export async function requireAuth(allowedRoles?: Role[]): Promise<SessionUser> {
   if (!session) {
     throw new AuthError('Unauthorized — authentication required', 401)
   }
-  if (allowedRoles && !allowedRoles.includes(session.role)) {
-    throw new AuthError('Forbidden — insufficient role', 403)
-  }
   // Confirm the user still exists / is active in DB (never trust token alone for role checks)
   const dbUser = await db.user.findUnique({ where: { id: session.id } })
   if (!dbUser || !dbUser.active) {
     throw new AuthError('Unauthorized — user not found or inactive', 401)
   }
-  // Use the DB role as source of truth
+  // Authorize using the current DB role, including after a role is revoked.
+  if (allowedRoles && !allowedRoles.includes(dbUser.role)) {
+    throw new AuthError('Forbidden — insufficient role', 403)
+  }
   return { id: dbUser.id, email: dbUser.email, name: dbUser.name, role: dbUser.role }
 }
 
@@ -128,6 +128,9 @@ export function roleAllows(action: string, role: Role): boolean {
     'analytics:read': ['DISASTER_OFFICER', 'ADMIN'],
     'audit:read': ['ADMIN'],
     'user:manage': ['ADMIN'],
+    'advanced:read': ['DISASTER_OFFICER', 'ADMIN', 'RESPONDER'],
+    'advanced:act': ['DISASTER_OFFICER', 'ADMIN'],
+    'missing-person:report': ['CITIZEN', 'DISASTER_OFFICER', 'ADMIN'],
   }
   return (matrix[action] || []).includes(role)
 }

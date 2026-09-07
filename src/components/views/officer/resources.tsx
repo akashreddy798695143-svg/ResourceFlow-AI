@@ -79,17 +79,40 @@ export function ResourcesView() {
 
   return (
     <div className="p-4 md:p-6">
-      <div className="mb-4 flex items-center gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Resources</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage and dispatch emergency resources.</p>
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">Resource Management</h1>
+        <p className="text-sm text-muted-foreground mt-1">Manage and dispatch emergency resources</p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="rounded-lg border border-border bg-card/50 p-3">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Total</p>
+          <p className="text-2xl font-bold tabular-nums mt-1">{resources.length}</p>
         </div>
-        {canCreate && (
-          <Button className="ml-auto gap-1.5" onClick={() => setShowAdd(!showAdd)}>
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+          <p className="text-[10px] text-emerald-400 uppercase tracking-wide font-medium">Available</p>
+          <p className="text-2xl font-bold tabular-nums mt-1 text-emerald-400">{resources.filter(r => r.status === 'AVAILABLE').length}</p>
+        </div>
+        <div className="rounded-lg border border-primary/30 bg-primary/10 p-3">
+          <p className="text-[10px] text-primary uppercase tracking-wide font-medium">Deployed</p>
+          <p className="text-2xl font-bold tabular-nums mt-1 text-primary">{resources.filter(r => r.status !== 'AVAILABLE' && r.status !== 'UNAVAILABLE').length}</p>
+        </div>
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+          <p className="text-[10px] text-red-400 uppercase tracking-wide font-medium">Unavailable</p>
+          <p className="text-2xl font-bold tabular-nums mt-1 text-red-400">{resources.filter(r => r.status === 'UNAVAILABLE').length}</p>
+        </div>
+      </div>
+
+      {/* Add button */}
+      {canCreate && (
+        <div className="mb-4 flex justify-end">
+          <Button className="gap-1.5" onClick={() => setShowAdd(!showAdd)}>
             <Plus className="h-4 w-4" /> Add Resource
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Add form */}
       {showAdd && canCreate && (

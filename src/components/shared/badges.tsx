@@ -6,15 +6,15 @@ import type { IncidentStatus, IncidentType, RiskLevel, ResourceStatus, ResourceT
 
 const STATUS_STYLES: Record<IncidentStatus, string> = {
   NEW: 'bg-muted text-muted-foreground',
-  ANALYZING: 'bg-sev-MEDIUM text-foreground border-sev-MEDIUM',
+  ANALYZING: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
   VERIFICATION: 'bg-muted text-muted-foreground',
   PRIORITIZED: 'bg-accent text-accent-foreground',
-  AWAITING_APPROVAL: 'bg-sev-HIGH text-foreground border-sev-HIGH',
+  AWAITING_APPROVAL: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
   ASSIGNED: 'bg-primary/20 text-primary border-primary/40',
   IN_PROGRESS: 'bg-primary/15 text-primary border-primary/30',
-  DELAYED: 'bg-sev-CRITICAL text-foreground border-sev-CRITICAL',
-  ESCALATED: 'bg-sev-CRITICAL text-foreground border-sev-CRITICAL',
-  RESOLVED: 'bg-sev-LOW text-foreground border-sev-LOW',
+  DELAYED: 'bg-red-500/15 text-red-400 border-red-500/30',
+  ESCALATED: 'bg-red-500/15 text-red-400 border-red-500/30',
+  RESOLVED: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
   CLOSED: 'bg-muted text-muted-foreground',
 }
 
@@ -27,10 +27,10 @@ export function StatusBadge({ status, className }: { status: IncidentStatus; cla
 }
 
 const RISK_STYLES: Record<RiskLevel, string> = {
-  LOW: 'bg-sev-LOW text-sev-LOW border-sev-LOW',
-  MEDIUM: 'bg-sev-MEDIUM text-sev-MEDIUM border-sev-MEDIUM',
-  HIGH: 'bg-sev-HIGH text-sev-HIGH border-sev-HIGH',
-  CRITICAL: 'bg-sev-CRITICAL text-sev-CRITICAL border-sev-CRITICAL',
+  LOW: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  MEDIUM: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  HIGH: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+  CRITICAL: 'bg-red-500/15 text-red-400 border-red-500/30',
 }
 
 export function RiskBadge({ level, score, className }: { level: RiskLevel; score?: number; className?: string }) {
@@ -42,11 +42,11 @@ export function RiskBadge({ level, score, className }: { level: RiskLevel; score
 }
 
 const RESOURCE_STATUS_STYLES: Record<ResourceStatus, string> = {
-  AVAILABLE: 'bg-sev-LOW text-sev-LOW border-sev-LOW',
+  AVAILABLE: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
   ASSIGNED: 'bg-primary/20 text-primary border-primary/40',
-  EN_ROUTE: 'bg-sev-MEDIUM text-sev-MEDIUM border-sev-MEDIUM',
+  EN_ROUTE: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
   ON_SCENE: 'bg-primary/20 text-primary border-primary/40',
-  UNAVAILABLE: 'bg-sev-CRITICAL text-sev-CRITICAL border-sev-CRITICAL',
+  UNAVAILABLE: 'bg-red-500/15 text-red-400 border-red-500/30',
 }
 
 export function ResourceStatusBadge({ status, className }: { status: ResourceStatus; className?: string }) {
@@ -93,12 +93,12 @@ export const RESOURCE_TYPE_LABELS: Record<ResourceType, string> = {
 }
 
 const NOTIF_STYLES: Record<NotificationType, string> = {
-  INFO: 'bg-primary/15 text-primary border-primary/30',
-  WARNING: 'bg-sev-MEDIUM text-sev-MEDIUM border-sev-MEDIUM',
-  CRITICAL: 'bg-sev-CRITICAL text-sev-CRITICAL border-sev-CRITICAL',
-  APPROVAL_REQUIRED: 'bg-sev-HIGH text-sev-HIGH border-sev-HIGH',
-  ESCALATION: 'bg-sev-CRITICAL text-sev-CRITICAL border-sev-CRITICAL',
-  RESOLUTION: 'bg-sev-LOW text-sev-LOW border-sev-LOW',
+  INFO: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+  WARNING: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  CRITICAL: 'bg-red-500/15 text-red-400 border-red-500/30',
+  APPROVAL_REQUIRED: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+  ESCALATION: 'bg-red-500/15 text-red-400 border-red-500/30',
+  RESOLUTION: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
 }
 
 export function NotificationTypeBadge({ type, className }: { type: NotificationType; className?: string }) {

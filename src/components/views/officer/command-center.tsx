@@ -189,47 +189,52 @@ export function CommandCenterView() {
     <div className="flex flex-col h-full">
 
       {/* Header bar */}
-      <div className="border-b border-border bg-card/40 px-4 md:px-6 py-3">
+      <div className="border-b border-border bg-card/60 backdrop-blur-sm px-4 md:px-6 py-3">
         <div className="flex flex-wrap items-center gap-3">
 
-          <div className="flex items-center gap-2">
-            <RadioTower className="h-5 w-5 text-primary" />
-
-            <h1 className="text-lg font-bold">
-              Disaster Command Center
-            </h1>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <RadioTower className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold tracking-tight">
+                Emergency Operations Center
+              </h1>
+              <p className="text-[10px] text-muted-foreground">
+                Real-time disaster coordination
+              </p>
+            </div>
 
             <Badge
               variant="outline"
               className={cn(
-                'text-[10px] gap-1',
+                'text-[10px] gap-1 ml-2',
                 connected
-                  ? 'border-sev-LOW text-sev-LOW'
-                  : 'border-sev-CRITICAL text-sev-CRITICAL'
+                  ? 'border-emerald-500/50 text-emerald-500'
+                  : 'border-red-500/50 text-red-500'
               )}
             >
               <span
                 className={cn(
                   'h-1.5 w-1.5 rounded-full',
                   connected
-                    ? 'bg-emerald-500 animate-pulse'
-                    : 'bg-red-500'
+                    ? 'bg-emerald-500'
+                    : 'bg-red-500 animate-pulse'
                 )}
               />
-
-              {connected ? 'LIVE' : 'RECONNECT'}
+              {connected ? 'LIVE' : 'RECONNECTING'}
             </Badge>
           </div>
 
           <div className="ml-auto flex items-center gap-2">
             <span className="text-xs text-muted-foreground hidden sm:inline">
-              Hackathon Demo:
+              Demo Scenarios:
             </span>
 
             <Button
               size="sm"
               variant="outline"
-              className="gap-1 text-xs"
+              className="gap-1.5 text-xs"
               onClick={() => runDemo('EARTHQUAKE')}
               disabled={demoRunning}
             >
@@ -244,7 +249,7 @@ export function CommandCenterView() {
             <Button
               size="sm"
               variant="outline"
-              className="gap-1 text-xs"
+              className="gap-1.5 text-xs"
               onClick={() => runDemo('LANDSLIDE')}
               disabled={demoRunning}
             >
@@ -259,7 +264,7 @@ export function CommandCenterView() {
             <Button
               size="sm"
               variant="outline"
-              className="gap-1 text-xs"
+              className="gap-1.5 text-xs"
               onClick={() => runDemo('ROAD_BLOCKAGE')}
               disabled={demoRunning}
             >
@@ -275,38 +280,38 @@ export function CommandCenterView() {
       </div>
 
       {/* 8 Primary Command Center KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 p-3 md:px-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 p-3 md:px-6">
 
         <KPI
-          label="Total Active"
+          label="Active Incidents"
           value={stats.activeIncidents}
           icon={Activity}
-          tone="HIGH"
+          tone={stats.activeIncidents > 5 ? 'HIGH' : stats.activeIncidents > 0 ? 'MEDIUM' : 'LOW'}
         />
 
         <KPI
           label="Critical"
           value={stats.criticalIncidents}
           icon={AlertTriangle}
-          tone="CRITICAL"
+          tone={stats.criticalIncidents > 0 ? 'CRITICAL' : 'LOW'}
         />
 
         <KPI
-          label="Available Res."
+          label="Available Resources"
           value={stats.availableResources}
           icon={Package}
-          tone="LOW"
+          tone={stats.availableResources > 0 ? 'LOW' : 'HIGH'}
         />
 
         <KPI
-          label="Deployed Res."
+          label="Deployed"
           value={stats.assignedResources}
           icon={CheckSquare}
           tone="MEDIUM"
         />
 
         <KPI
-          label="Responders Active"
+          label="Responders"
           value={activeRespondersCount}
           icon={RadioTower}
           tone="LOW"
@@ -329,7 +334,7 @@ export function CommandCenterView() {
           label="Escalated"
           value={stats.escalatedIncidents}
           icon={TrendingUp}
-          tone="CRITICAL"
+          tone={stats.escalatedIncidents > 0 ? 'CRITICAL' : 'LOW'}
         />
 
       </div>
@@ -779,28 +784,32 @@ function KPI({
             ? 'text-sev-LOW'
             : 'text-foreground'
 
+  const bgToneClass =
+    tone === 'CRITICAL'
+      ? 'bg-sev-CRITICAL/10 border-sev-CRITICAL/30'
+      : tone === 'HIGH'
+        ? 'bg-sev-HIGH/10 border-sev-HIGH/30'
+        : tone === 'MEDIUM'
+          ? 'bg-sev-MEDIUM/10 border-sev-MEDIUM/30'
+          : tone === 'LOW'
+            ? 'bg-sev-LOW/10 border-sev-LOW/30'
+            : 'bg-card/50 border-border'
+
   return (
-    <div className="rounded-md border border-border bg-card/50 p-2.5">
-
-      <div className="flex items-center justify-between">
-
-        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+    <div className={cn(
+      'rounded-lg border p-3 transition-all',
+      bgToneClass,
+      tone === 'CRITICAL' && 'rf-critical-pulse'
+    )}>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] text-muted-uppercase tracking-wide font-medium">
           {label}
         </span>
-
-        <Icon className={cn('h-3.5 w-3.5', toneClass)} />
-
+        <Icon className={cn('h-4 w-4', toneClass)} />
       </div>
-
-      <div
-        className={cn(
-          'mt-1 text-xl font-bold tabular-nums',
-          toneClass
-        )}
-      >
+      <div className={cn('text-2xl font-bold tabular-nums', toneClass)}>
         {value}
       </div>
-
     </div>
   )
 }

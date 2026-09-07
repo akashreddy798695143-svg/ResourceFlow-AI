@@ -211,7 +211,7 @@ export function IncidentDetailView() {
   }
 
   return (
-    <div className="p-4 md:p-6 grid lg:grid-cols-3 gap-4">
+    <div className="p-4 md:p-6 grid lg:grid-cols-3 gap-4 lg:gap-6">
       <div className="lg:col-span-2 space-y-4">
         <Button variant="ghost" size="sm" onClick={() => navigate('/incidents')} className="gap-1.5 mb-1">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to incidents
@@ -220,21 +220,31 @@ export function IncidentDetailView() {
         {/* Header */}
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap mb-3">
               <span className="font-mono text-sm text-primary font-bold">{incident.incidentCode}</span>
               <IncidentTypeBadge type={incident.type} />
               <StatusBadge status={incident.status as IncidentStatus} />
               {incident.riskLevel && <RiskBadge level={incident.riskLevel as RiskLevel} score={incident.riskScore ?? undefined} />}
-              {incident.duplicateFlag && <Badge variant="outline" className="text-[9px] text-sev-MEDIUM border-sev-MEDIUM">POSSIBLE DUPLICATE</Badge>}
-              {incident.escalationLevel > 0 && <Badge variant="outline" className="text-[9px] text-sev-CRITICAL border-sev-CRITICAL">L{incident.escalationLevel}</Badge>}
+              {incident.duplicateFlag && <Badge variant="outline" className="text-[9px] text-amber-400 border-amber-500/30">POSSIBLE DUPLICATE</Badge>}
+              {incident.escalationLevel > 0 && <Badge variant="outline" className="text-[9px] text-red-400 border-red-500/30">LEVEL {incident.escalationLevel}</Badge>}
               <span className="ml-auto text-xs text-muted-foreground font-mono">{new Date(incident.createdAt).toLocaleString()}</span>
             </div>
-            <p className="mt-3 text-sm">{incident.description}</p>
-            <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> {incident.location} · {incident.latitude.toFixed(4)}, {incident.longitude.toFixed(4)}</p>
+            <p className="text-sm mb-2">{incident.description}</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> {incident.location} · {incident.latitude.toFixed(4)}, {incident.longitude.toFixed(4)}</p>
+
+            {/* Critical Alert */}
+            {(incident.riskLevel === 'CRITICAL' || incident.status === 'ESCALATED') && (
+              <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-400 font-medium">
+                  {incident.status === 'ESCALATED' ? 'This incident has been escalated — immediate attention required' : 'Critical priority — immediate response recommended'}
+                </p>
+              </div>
+            )}
 
             {/* Citizen contact info — shown to officers/admins */}
             {canApprove && (
-              <div className="mt-2 rounded-md border border-border bg-muted/30 p-2.5 space-y-1">
+              <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3 space-y-1">
                 <p className="text-[10px] font-semibold uppercase text-muted-foreground">Citizen Contact</p>
                 <div className="flex flex-wrap items-center gap-3 text-xs">
                   <span className="flex items-center gap-1.5"><User className="h-3 w-3 text-muted-foreground" /> {incident.citizenName || incident.reportedBy?.name || '—'}</span>
@@ -268,18 +278,18 @@ export function IncidentDetailView() {
         </Card>
 
         {/* AI Analysis */}
-        <Card>
+        <Card className="rf-ai-card">
           <CardHeader className="pb-2 border-b border-border">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Bot className="h-4 w-4 text-primary" /> AI Incident Analysis
-              <Badge variant="outline" className={ai.available ? 'text-[9px] text-sev-LOW border-sev-LOW' : 'text-[9px] text-sev-MEDIUM border-sev-MEDIUM'}>
-                {ai.available ? 'AI' : 'FALLBACK'}
+              <Bot className="h-4 w-4 text-primary" /> AI Incident Assessment
+              <Badge variant="outline" className={ai.available ? 'text-[9px] text-emerald-400 border-emerald-500/30' : 'text-[9px] text-amber-400 border-amber-500/30'}>
+                {ai.available ? 'AI POWERED' : 'FALLBACK'}
               </Badge>
               {ai.confidence != null && <span className="text-[10px] text-muted-foreground font-mono ml-auto">confidence {(ai.confidence * 100).toFixed(0)}%</span>}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 grid sm:grid-cols-2 gap-3 text-sm">
-            <Field label="Severity" value={ai.severity || '—'} tone={ai.severity as any} />
+            <Field label="Severity" value={ai.severity || '—'} tone={ai.severity?.toLowerCase() as any} />
             <Field label="People affected (est.)" value={ai.people != null ? String(ai.people) : '—'} />
             <Field label="Road blocked" value={ai.roadBlocked == null ? '—' : ai.roadBlocked ? 'Yes' : 'No'} />
             <Field label="Urgent needs" value={ai.urgentNeeds.length ? ai.urgentNeeds.join(', ') : '—'} />
