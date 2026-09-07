@@ -55,8 +55,12 @@ model SafetyContact {
   ownerId   String
   name      String
   phone     String
+  email     String?
   relation  String   @default("FAMILY")
   isPrimary Boolean  @default(false)
+  emailVerified Boolean @default(false)
+  notificationStatus String? // PENDING, SENT, FAILED
+  lastNotificationAt DateTime?
   createdAt DateTime @default(now())
   owner     User     @relation("SafetyContacts", fields: [ownerId], references: [id], onDelete: Cascade)
 

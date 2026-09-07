@@ -1,12 +1,14 @@
 // POST /api/citizen/sos — One-Tap SOS (citizen only).
 // Creates an Incident (reusing the existing pipeline: AI triage → workflow →
 // clustering → officer command center) flagged as one-tap SOS.
+// Email notifications are sent to verified Family Safety Circle members.
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth, handleAuthError } from '@/lib/auth'
 import { recordIncidentEvent, recordAudit, broadcastEvent } from '@/lib/events'
 import { runIncidentWorkflow } from '@/lib/workflows/incident-workflow'
 import { triageSos } from '@/lib/services/citizen-safety-service'
+import { sendEmergencySosEmails } from '@/lib/services/family-notification-service'
 import type { IncidentType } from '@prisma/client'
 
 export async function POST(req: NextRequest) {
@@ -90,6 +92,24 @@ export async function POST(req: NextRequest) {
     // Run the existing incident pipeline asynchronously (triage → cluster → risk → resource rec)
     runIncidentWorkflow(incident.id).catch((e) => console.error('[sos] workflow error:', e))
 
+    // Send email notifications to verified Family Safety Circle members
+    // This runs asynchronously and does not block the response
+    sendEmergencySosEmails(user.id, {
+      citizenName: user.name,
+      incidentCode,
+      incidentType,
+      severity: triage.severity,
+      locationName,
+      latitude,
+      longitude,
+      incidentTime: incident.createdAt,
+      status: 'NEW',
+      guidance: triage.immediateGuidance,
+    }).catch((emailError) => {
+      console.error('[sos] Email notification error:', emailError)
+      // Email failures do not break the SOS flow
+    })
+
     return NextResponse.json(
       {
         id: incident.id,
@@ -100,7 +120,7 @@ export async function POST(req: NextRequest) {
         guidance: triage.immediateGuidance,
         triageSource: triage.source,
         location: { name: locationName, latitude, longitude },
-        message: 'SOS received. Responders and command center have been notified.',
+        message: 'SOS received. Responders, command center, and your Family Safety Circle have been notified.',
       },
       { status: 201 }
     )

@@ -83,15 +83,41 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
         }
       }
 
-      // Sender
-      const from = senderId.startsWith('whatsapp:')
-        ? senderId
-        : `whatsapp:${senderId}`
+      // Validate ContentSid format (should start with HX followed by 32 hex chars)
+      const contentSidRegex = /^HX[A-Fa-f0-9]{32}$/
+      if (!contentSidRegex.test(contentSid)) {
+        return {
+          ok: false,
+          error: `Invalid WHATSAPP_CONTENT_SID format: "${contentSid}". Must be a valid Twilio ContentSid (e.g., HX1234567890abcdef1234567890abcdef). Get this from Twilio Console > Content Editor.`,
+        }
+      }
 
-      // Recipient
-      const formattedTo = to.startsWith('whatsapp:')
-        ? to
-        : `whatsapp:${to}`
+      // Validate phone numbers are in E.164 format (e.g., +1234567890)
+      const phoneRegex = /^\+?[1-9]\d{1,14}$/
+      
+      // Clean the sender number (remove whatsapp: prefix for validation)
+      const cleanSender = senderId.replace(/^whatsapp:/i, '')
+      if (!phoneRegex.test(cleanSender)) {
+        return {
+          ok: false,
+          error: `Invalid WHATSAPP_SENDER_ID format: "${senderId}". Must be E.164 format (e.g., whatsapp:+1234567890).`,
+        }
+      }
+
+      // Clean the recipient number (remove whatsapp: prefix for validation)
+      const cleanTo = to.replace(/^whatsapp:/i, '')
+      if (!phoneRegex.test(cleanTo)) {
+        return {
+          ok: false,
+          error: `Invalid recipient phone format: "${to}". Must be E.164 format (e.g., whatsapp:+1234567890). Trial accounts can only send to verified numbers.`,
+        }
+      }
+
+      // Sender - ensure E.164 format with whatsapp: prefix
+      const from = `whatsapp:${cleanSender.startsWith('+') ? cleanSender : '+' + cleanSender}`
+
+      // Recipient - ensure E.164 format with whatsapp: prefix
+      const formattedTo = `whatsapp:${cleanTo.startsWith('+') ? cleanTo : '+' + cleanTo}`
 
       // Twilio Messages API
       const url =
@@ -112,12 +138,13 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
 
       const variables = createTemplateVariables(message)
 
-      const body = new URLSearchParams({
-        To: formattedTo,
-        From: from,
-        ContentSid: contentSid,
-        ContentVariables: JSON.stringify(variables),
-      })
+      // Trial accounts: only send required parameters
+      // Do NOT include optional parameters like StatusCallback, MessagingServiceSid, etc.
+      const body = new URLSearchParams()
+      body.append('To', formattedTo)
+      body.append('From', from)
+      body.append('ContentSid', contentSid)
+      body.append('ContentVariables', JSON.stringify(variables))
 
       // Account SID + Auth Token
       const basicAuth = Buffer
@@ -165,13 +192,27 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
           }
         )
 
+        // Provide specific guidance for trial account limitations
+        let userMessage = `Twilio WhatsApp error: ${errorMessage}`
+        
+        if (errorMessage.includes('trial') || errorMessage.includes('upgrade')) {
+          userMessage = 
+            `Twilio trial account restriction: ${errorMessage}. ` +
+            `FIX: 1) Verify recipient number in Twilio Console > Phone Numbers > Verified Caller IDs. ` +
+            `2) Ensure WHATSAPP_SENDER_ID is your Twilio WhatsApp number (format: whatsapp:+1234567890). ` +
+            `3) Ensure WHATSAPP_CONTENT_SID is an approved WhatsApp template. ` +
+            `4) Trial accounts can only send to verified numbers. Upgrade account to send to any number.`
+        } else if (errorMessage.includes('Invalid or disallowed parameters')) {
+          userMessage = 
+            `Twilio WhatsApp parameter error: ${errorMessage}. ` +
+            `FIX: 1) Check that ContentSid matches an approved template. ` +
+            `2) Ensure ContentVariables match template variables ({{1}}, {{2}}, etc). ` +
+            `3) Trial accounts cannot use advanced parameters like StatusCallback.`
+        }
+
         return {
           ok: false,
-          error:
-            `Twilio WhatsApp error: ${errorMessage}`.slice(
-              0,
-              300
-            ),
+          error: userMessage.slice(0, 500),
         }
       }
 
@@ -310,6 +351,29 @@ function getActiveWhatsAppProvider(): WhatsAppProvider {
   cachedWhatsAppProviderName = providerName
 
   return cachedWhatsAppProvider
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WhatsApp Service Status
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function getWhatsAppServiceStatus() {
+  const configured = Boolean(
+    process.env.WHATSAPP_ACCOUNT_SID &&
+    process.env.WHATSAPP_API_KEY &&
+    process.env.WHATSAPP_SENDER_ID &&
+    process.env.WHATSAPP_CONTENT_SID
+  )
+
+  return {
+    provider: process.env.WHATSAPP_PROVIDER || 'console',
+    configured,
+    available: configured,
+    status: configured ? 'configured' : 'not_configured',
+    message: configured
+      ? 'WhatsApp service is configured'
+      : 'WhatsApp service is not configured',
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

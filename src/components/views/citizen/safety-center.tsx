@@ -12,7 +12,7 @@ import { toast } from 'sonner'
 import {
   Siren, HeartPulse, Users, MapPinOff, ShieldCheck, CloudRain, Droplets,
   Package, Home, BellRing, HandHeart, Accessibility, Languages, WifiOff,
-  Loader2, Phone, Trash2, Volume2, RefreshCw, Flame, AlertTriangle, Zap,
+  Loader2, Phone, Trash2, Volume2, RefreshCw, Flame, AlertTriangle, Zap, Mail,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -215,13 +215,24 @@ function SosSection({ lang, big }: { lang: LanguageCode; big: boolean }) {
 
 // ─── 3+4. Family Safety Circle + Safe Check-In ───────────────────────────────
 
-interface Contact { id: string; name: string; phone: string; relation: string; isPrimary: boolean }
+interface Contact {
+  id: string
+  name: string
+  phone: string
+  email?: string | null
+  relation: string
+  isPrimary: boolean
+  emailVerified: boolean
+  notificationStatus?: string | null
+  lastNotificationAt?: string | null
+}
 
 function CircleSection({ lang, big }: { lang: LanguageCode; big: boolean }) {
   const t = UI_STRINGS[lang]
   const [contacts, setContacts] = useState<Contact[]>([])
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [relation, setRelation] = useState('FAMILY')
   const [safeMsg, setSafeMsg] = useState('')
   const [selected, setSelected] = useState(new Set<string>())
@@ -245,8 +256,14 @@ function CircleSection({ lang, big }: { lang: LanguageCode; big: boolean }) {
   const add = async () => {
     setBusy(true)
     try {
-      await apiPost('/api/citizen/safety-contacts', { name, phone, relation })
-      setName(''); setPhone('')
+      await apiPost('/api/citizen/safety-contacts', {
+        name,
+        phone,
+        email: email || undefined,
+        relation,
+        emailVerified: !!email, // Auto-verify if email provided
+      })
+      setName(''); setPhone(''); setEmail('')
       toast.success('Contact added')
       load()
     } catch (e: any) {
@@ -269,14 +286,30 @@ function CircleSection({ lang, big }: { lang: LanguageCode; big: boolean }) {
     setBusy(true)
     try {
       const pos = await getPosition()
-      const res = await apiPost<{ message: string }>('/api/citizen/check-in', {
+      const res = await apiPost<{
+        message: string
+        whatsapp?: { sent: number; failed: number; unavailable: number }
+      }>('/api/citizen/check-in', {
         isSafe: true,
         message: safeMsg || undefined,
         contactIds: [...selected],
         latitude: pos?.coords.latitude,
         longitude: pos?.coords.longitude,
       })
-      toast.success(res.message)
+
+      // Show success message with WhatsApp and email notification status
+      let successMsg = "You're marked as Safe."
+      if (res.email?.sent > 0) {
+        successMsg += " Your Family Safety Circle has been notified by email."
+      } else if (res.whatsapp?.sent) {
+        successMsg += " Your safety contacts have been notified via WhatsApp."
+      } else if (res.whatsapp?.unavailable) {
+        successMsg += " WhatsApp notification unavailable."
+      } else {
+        successMsg += " Your safety contacts have been notified."
+      }
+      toast.success(successMsg)
+
       if (big) speak('You are marked safe. Contacts notified.', lang)
       setSafeMsg('')
     } catch (e: any) {
@@ -324,8 +357,29 @@ function CircleSection({ lang, big }: { lang: LanguageCode; big: boolean }) {
                     />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{c.name} {c.isPrimary && <Badge variant="secondary" className="text-[9px]">PRIMARY</Badge>}</p>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <p className="text-sm font-medium truncate">{c.name}</p>
+                      {c.isPrimary && <Badge variant="secondary" className="text-[9px]">PRIMARY</Badge>}
+                      {c.emailVerified && (
+                        <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-600">
+                          <Mail className="h-2.5 w-2.5 mr-0.5" />Verified
+                        </Badge>
+                      )}
+                      {c.notificationStatus && (
+                        <Badge
+                          variant="outline"
+                          className={`text-[9px] ${c.notificationStatus === 'SENT' ? 'text-blue-600 border-blue-600' : c.notificationStatus === 'FAILED' ? 'text-red-600 border-red-600' : 'text-gray-500 border-gray-500'}`}
+                        >
+                          {c.notificationStatus}
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground font-mono">{c.phone} · {c.relation}</p>
+                    {c.email && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        <Mail className="h-3 w-3 inline mr-0.5" />{c.email}
+                      </p>
+                    )}
                   </div>
                   <Button variant="ghost" size="icon" aria-label={`Remove ${c.name}`} onClick={() => remove(c.id)}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -334,9 +388,10 @@ function CircleSection({ lang, big }: { lang: LanguageCode; big: boolean }) {
               ))}
             </div>
           )}
-          <div className={cn('grid gap-2', big ? 'sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-4')}>
+          <div className={cn('grid gap-2', big ? 'sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-5')}>
             <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className={big ? 'h-12 text-lg' : ''} />
             <Input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} className={big ? 'h-12 text-lg' : ''} />
+            <Input placeholder="Email (optional)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={big ? 'h-12 text-lg' : ''} />
             <Select value={relation} onValueChange={setRelation}>
               <SelectTrigger className={big ? 'h-12 text-lg' : ''}><SelectValue /></SelectTrigger>
               <SelectContent>

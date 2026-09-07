@@ -22,9 +22,8 @@ export async function broadcastEvent(event: Omit<DashboardEvent, 'timestamp'>) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-  } catch (e) {
-    // Realtime hub unreachable — app continues (WebSocket reconnects on client)
-    console.error('[broadcast] realtime hub unreachable:', e)
+  } catch {
+    // Realtime hub unreachable — silently ignore, app continues (WebSocket reconnects on client)
   }
 }
 
