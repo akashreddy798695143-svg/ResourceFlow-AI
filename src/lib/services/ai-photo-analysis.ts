@@ -21,6 +21,18 @@ export interface PhotoAnalysisResult {
   demo?: boolean
 }
 
+interface PhotoAnalysisJson {
+  observations?: string[]
+  damageType?: string[]
+  severity?: string
+  peopleVisible?: number
+  vehiclesVisible?: number
+  infrastructureDamage?: string[]
+  environmentalHazards?: string[]
+  recommendedAction?: string
+  confidence?: number
+}
+
 const PHOTO_ANALYSIS_SYSTEM_PROMPT = `You are an AI assistant for emergency disaster response. Analyze the provided incident photo and citizen description.
 
 IMPORTANT GUIDELINES:
@@ -72,7 +84,7 @@ Analyze this incident photo and provide structured observations. Remember: all o
       return generateDemoAnalysis(incidentId, description)
     }
 
-    const analysis = extractJson(result.content)
+    const analysis = extractJson<PhotoAnalysisJson>(result.content)
 
     if (!analysis) {
       return generateDemoAnalysis(incidentId, description)
@@ -81,9 +93,9 @@ Analyze this incident photo and provide structured observations. Remember: all o
     const normalizedAnalysis = {
       observations: Array.isArray(analysis.observations) ? analysis.observations : ['Photo analyzed'],
       damageType: Array.isArray(analysis.damageType) ? analysis.damageType : ['Unknown'],
-      severity: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(analysis.severity)
-        ? analysis.severity
-        : 'MEDIUM',
+      severity: (['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(String(analysis.severity).toUpperCase())
+        ? String(analysis.severity).toUpperCase()
+        : 'MEDIUM') as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
       peopleVisible: typeof analysis.peopleVisible === 'number' ? analysis.peopleVisible : null,
       vehiclesVisible: typeof analysis.vehiclesVisible === 'number' ? analysis.vehiclesVisible : null,
       infrastructureDamage: Array.isArray(analysis.infrastructureDamage) ? analysis.infrastructureDamage : [],

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Bot, Loader2, Send, Sparkles, X } from 'lucide-react'
-import { apiPost } from '@/lib/api-client'
+import { apiPost, ApiError } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
@@ -12,7 +12,16 @@ type Message = {
   content: string
 }
 
+// The AI chat API returns exactly one predictable shape.
+type ChatResponse = {
+  success: boolean
+  response?: string
+  error?: string
+}
+
 const STARTER_MESSAGE = 'I can analyze incident reports, risks, resource plans, maps, or any operational question.'
+const FALLBACK_RESPONSE = 'Unable to generate an AI response right now. Please try again.'
+const NETWORK_ERROR_MESSAGE = 'AI service connection failed. Please check the server and try again.'
 
 export function AIAssistant() {
   const [open, setOpen] = useState(false)
@@ -21,6 +30,12 @@ export function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: STARTER_MESSAGE },
   ])
+  const messagesEndRef = useRef<HTMLDivElement | null>(null)
+
+  // Keep the conversation scrolled to the newest message.
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [messages, loading, open])
 
   const submit = async () => {
     const value = prompt.trim()
@@ -31,13 +46,35 @@ export function AIAssistant() {
     setLoading(true)
 
     try {
-      const result = await apiPost<{ content: string }>('/api/ai/chat', { prompt: value })
-      setMessages((current) => [...current, { role: 'assistant', content: result.content }])
-    } catch (error: any) {
-      setMessages((current) => [
-        ...current,
-        { role: 'assistant', content: error?.message || 'The assistant is unavailable. Please try again.' },
-      ])
+      const result = await apiPost<ChatResponse>('/api/ai/chat', { prompt: value })
+
+      const content = result?.response?.trim()
+      // success + response → display the AI message
+      if (result?.success && content) {
+        setMessages((current) => [...current, { role: 'assistant', content }])
+      } else if (result?.success) {
+        // success but empty/missing response — never show a blank bubble
+        setMessages((current) => [...current, { role: 'assistant', content: FALLBACK_RESPONSE }])
+      } else {
+        // failure + error → display the server error
+        setMessages((current) => [
+          ...current,
+          { role: 'assistant', content: result?.error?.trim() || FALLBACK_RESPONSE },
+        ])
+      }
+    } catch (error: unknown) {
+      // Network failure (fetch rejected) vs. API-level error
+      if (error instanceof ApiError) {
+        setMessages((current) => [
+          ...current,
+          { role: 'assistant', content: error.message || FALLBACK_RESPONSE },
+        ])
+      } else {
+        setMessages((current) => [
+          ...current,
+          { role: 'assistant', content: NETWORK_ERROR_MESSAGE },
+        ])
+      }
     } finally {
       setLoading(false)
     }
@@ -68,8 +105,9 @@ export function AIAssistant() {
               </div>
             ))}
             {loading && (
-              <div className="rf-ai-message"><Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /><p>Analyzing your request...</p></div>
+              <div className="rf-ai-message"><Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /><p>AI is thinking...</p></div>
             )}
+            <div ref={messagesEndRef} />
           </div>
 
           <div className="rf-ai-composer">

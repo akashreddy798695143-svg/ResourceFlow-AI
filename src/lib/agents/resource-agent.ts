@@ -104,7 +104,7 @@ Alternatives: ${alternatives.map((a) => a.resource.resourceCode).join(', ')}`
 
   const res = await askAI(systemPrompt, userPrompt)
   if (res.ok) {
-    const parsed = extractJson(res.content)
+    const parsed = extractJson<{ reason?: string; alt_reasons?: string[] }>(res.content)
     if (parsed && typeof parsed.reason === 'string') {
       return {
         recommended_resource: {

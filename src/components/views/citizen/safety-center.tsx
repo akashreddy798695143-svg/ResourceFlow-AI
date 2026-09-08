@@ -289,6 +289,7 @@ function CircleSection({ lang, big }: { lang: LanguageCode; big: boolean }) {
       const res = await apiPost<{
         message: string
         whatsapp?: { sent: number; failed: number; unavailable: number }
+        email?: { sent: number; failed: number }
       }>('/api/citizen/check-in', {
         isSafe: true,
         message: safeMsg || undefined,
@@ -299,7 +300,7 @@ function CircleSection({ lang, big }: { lang: LanguageCode; big: boolean }) {
 
       // Show success message with WhatsApp and email notification status
       let successMsg = "You're marked as Safe."
-      if (res.email?.sent > 0) {
+      if ((res.email?.sent ?? 0) > 0) {
         successMsg += " Your Family Safety Circle has been notified by email."
       } else if (res.whatsapp?.sent) {
         successMsg += " Your safety contacts have been notified via WhatsApp."

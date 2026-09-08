@@ -6,6 +6,7 @@ import { RadioTower, Shield, Lock, FileText, AlertTriangle, Mail } from 'lucide-
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { PrivacyModal, TermsModal, SecurityModal, DisclaimerModal, DemoAccessModal } from '@/components/shared/legal-modals'
 
 export function Footer() {
   const { navigate } = useRouter()

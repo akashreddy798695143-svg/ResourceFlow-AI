@@ -42,6 +42,24 @@ export interface TriageResult {
   source: 'ai' | 'demo'
 }
 
+interface TriageSosJson {
+  severity?: string
+  urgencyScore?: number
+  incidentType?: string
+  immediateGuidance?: string
+  peopleAtRisk?: string
+  keywords?: string[]
+}
+
+interface SafetyGuideJson {
+  steps?: string[]
+}
+
+interface HazardVerifyJson {
+  summary?: string
+  confidence?: number
+}
+
 const CRITICAL_WORDS = [
   'dying', 'trapped', 'unconscious', 'bleeding', 'breathing', 'collaps',
   'drowning', 'fire', 'burning', 'electric', 'buried', 'critical', 'emergency',
@@ -115,7 +133,7 @@ export async function triageSos(description: string, language?: string | null): 
     ].join('\n')
     const res = await askAI(system, description.slice(0, 2000))
     if (!res.ok) return fallback
-    const json = extractJson(res.content)
+    const json = extractJson<TriageSosJson>(res.content)
     if (!json || !json.severity) return fallback
     const severity = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(String(json.severity))
       ? (json.severity as TriageSeverity)
@@ -125,7 +143,9 @@ export async function triageSos(description: string, language?: string | null): 
       urgencyScore: Math.max(0, Math.min(100, Number(json.urgencyScore) || fallback.urgencyScore)),
       incidentType: String(json.incidentType || fallback.incidentType).toUpperCase(),
       immediateGuidance: String(json.immediateGuidance || fallback.immediateGuidance),
-      peopleAtRisk: ['yes', 'no', 'unknown'].includes(json.peopleAtRisk) ? json.peopleAtRisk : 'unknown',
+      peopleAtRisk: (['yes', 'no', 'unknown'].includes(String(json.peopleAtRisk))
+        ? String(json.peopleAtRisk)
+        : 'unknown') as 'yes' | 'no' | 'unknown',
       keywords: Array.isArray(json.keywords) ? json.keywords.slice(0, 8).map(String) : fallback.keywords,
       source: 'ai',
     }
@@ -191,7 +211,7 @@ export async function safetyGuide(
     const user = `Disaster type: ${disasterType}. Situation: ${context || 'general preparedness'}`
     const res = await askAI(system, user)
     if (!res.ok) return { steps: demoSteps, source: 'demo' }
-    const json = extractJson(res.content)
+    const json = extractJson<SafetyGuideJson>(res.content)
     if (json && Array.isArray(json.steps) && json.steps.length) {
       return { steps: json.steps.slice(0, 5).map(String), source: 'ai' }
     }
@@ -245,7 +265,7 @@ export async function aiHazardVerify(
     const user = `Hazard description: "${description}". Similar independent reports nearby: ${duplicateCount}`
     const res = await askAI(system, user)
     if (!res.ok) return { summary: description.slice(0, 140), confidence: demoConfidence, source: 'demo' }
-    const json = extractJson(res.content)
+    const json = extractJson<HazardVerifyJson>(res.content)
     if (!json || !json.summary) return { summary: description.slice(0, 140), confidence: demoConfidence, source: 'demo' }
     return {
       summary: String(json.summary),

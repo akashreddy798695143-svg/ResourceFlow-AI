@@ -80,7 +80,7 @@ Analyse the description in its original language and return the JSON now.`
 
   const res = await askAI(SYSTEM_PROMPT, userPrompt)
   if (res.ok) {
-    const parsed = extractJson(res.content)
+    const parsed = extractJson<Partial<IncidentAnalysis>>(res.content)
     if (parsed && validateAnalysis(parsed)) {
       return { ...normalizeAnalysis(parsed), source: 'ai' }
     }

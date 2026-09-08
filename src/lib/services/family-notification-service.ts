@@ -82,7 +82,7 @@ export async function sendSafeCheckInEmails(
 
   // Send email to each verified contact
   for (const contact of contacts) {
-    const result = await sendSafeCheckInEmail(contact, data)
+    const result = await sendSafeCheckInEmail({ ...contact, email: contact.email ?? "" }, data)
     results.push(result)
 
     // Update contact notification status
@@ -193,7 +193,7 @@ export async function sendEmergencySosEmails(
 
   // Send email to each verified contact
   for (const contact of contacts) {
-    const result = await sendEmergencySosEmail(contact, data)
+    const result = await sendEmergencySosEmail({ ...contact, email: contact.email ?? "" }, data)
     results.push(result)
 
     // Update contact notification status

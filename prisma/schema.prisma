@@ -7,83 +7,152 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id                 String               @id @default(cuid())
-  email              String               @unique
-  phone              String?
-  name               String
-  emailVerified      Boolean              @default(false)
-  phoneVerified      Boolean              @default(false)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  active             Boolean              @default(true)
-  emailNotifications Boolean              @default(true)
-  inAppNotifications Boolean              @default(true)
-  passwordHash       String?
-  smsNotifications   Boolean              @default(true)
-  role               Role                 @default(CITIZEN)
-  approvals          Approval[]
-  auditLogs          AuditLog[]
-  incidents          Incident[]
-  notifications      Notification[]
-  notificationLogs   NotificationLog[]
-  otpVerifications   OtpVerification[]
-  resourceOps        ResourceAssignment[]
-  operationalObservations OperationalObservation[]
-  aiInsights         AiInsight[]            @relation("AiInsights")
-  missingPersonReports MissingPerson[]      @relation("MissingPersonReports")
-  marketplaceListings  MarketplaceListing[] @relation("MarketplaceListings")
-  commsBlackouts      CommsBlackout[]        @relation("CommsBlackouts")
-  whatIfRuns          WhatIfRun[]            @relation("WhatIfRuns")
-  safetyContacts      SafetyContact[]        @relation("SafetyContacts")
-  safeCheckIns        SafeCheckIn[]          @relation("SafeCheckIns")
-  hazardReports       HazardReport[]         @relation("HazardReports")
-  shelterFeedback     ShelterFeedback[]      @relation("ShelterFeedback")
-  reliefRequests      ReliefRequest[]        @relation("ReliefRequests")
-  volunteerProfile    VolunteerRegistration? @relation("VolunteerProfile")
-  publishedAlerts     VerifiedAlert[]        @relation("VerifiedAlerts")
+model AIRecommendation {
+  id         String   @id
+  incidentId String
+  recType    String
+  payload    String
+  source     String   @default("ai")
+  createdAt  DateTime @default(now())
+  Incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
-  @@index([phone])
+  @@index([incidentId])
 }
 
-// ─── Citizen Safety Suite ────────────────────────────────────────────────────
-// All citizen-owned records are scoped by owner FK; API layer enforces
-// owner-only access for CITIZEN role and officer access via explicit routes.
+model AiInsight {
+  id          String    @id
+  incidentId  String?
+  feature     String
+  severity    RiskLevel @default(LOW)
+  confidence  Float?
+  payload     Json
+  source      String    @default("deterministic")
+  demo        Boolean   @default(false)
+  status      String    @default("ACTIVE")
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  User        User?     @relation(fields: [createdById], references: [id])
+  Incident    Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
-model SafetyContact {
-  id        String   @id @default(cuid())
-  ownerId   String
-  name      String
-  phone     String
-  email     String?
-  relation  String   @default("FAMILY")
-  isPrimary Boolean  @default(false)
-  emailVerified Boolean @default(false)
-  notificationStatus String? // PENDING, SENT, FAILED
-  lastNotificationAt DateTime?
-  createdAt DateTime @default(now())
-  owner     User     @relation("SafetyContacts", fields: [ownerId], references: [id], onDelete: Cascade)
-
-  @@index([ownerId])
+  @@index([feature, status])
+  @@index([incidentId])
 }
 
-model SafeCheckIn {
-  id           String   @id @default(cuid())
-  userId       String
-  isSafe       Boolean  @default(true)
-  message      String?
-  latitude     Float?
-  longitude    Float?
-  locationName String?
-  sharedWith   Json?    // Array of SafetyContact ids the status was shared with
-  createdAt    DateTime @default(now())
-  user         User     @relation("SafeCheckIns", fields: [userId], references: [id], onDelete: Cascade)
+model Approval {
+  id             String           @id
+  incidentId     String
+  resourceId     String?
+  recommendation String
+  decision       ApprovalDecision @default(PENDING)
+  reviewerId     String?
+  reason         String?
+  reviewedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  Incident       Incident         @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  User           User?            @relation(fields: [reviewerId], references: [id])
 
-  @@index([userId, createdAt])
+  @@index([decision])
+}
+
+model AuditLog {
+  id            String   @id
+  timestamp     DateTime @default(now())
+  userId        String?
+  role          String?
+  action        String
+  entityId      String?
+  previousState String?
+  newState      String?
+  reason        String?
+  User          User?    @relation(fields: [userId], references: [id])
+
+  @@index([action])
+}
+
+model CommsBlackout {
+  id              String    @id
+  mode            String    @default("PARTIAL")
+  reason          String
+  affectedRegions Json?
+  active          Boolean   @default(true)
+  startedById     String?
+  startedAt       DateTime  @default(now())
+  endsAt          DateTime?
+  demo            Boolean   @default(false)
+  User            User?     @relation(fields: [startedById], references: [id])
+
+  @@index([active])
+}
+
+model DemandForecast {
+  id              String       @id
+  region          String
+  resourceType    ResourceType
+  horizonHours    Int          @default(24)
+  predictedDemand Int
+  currentSupply   Int
+  gap             Int
+  confidence      Float
+  source          String       @default("deterministic")
+  demo            Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+
+  @@index([region, resourceType])
+}
+
+model EmailNotification {
+  id              String      @id
+  incidentId      String
+  recipientEmail  String
+  recipientUserId String?
+  emailType       EmailType
+  subject         String
+  status          EmailStatus @default(PENDING)
+  sentAt          DateTime?
+  errorMessage    String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime
+  Incident        Incident    @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId])
+  @@index([recipientUserId])
+  @@index([status])
+}
+
+model EvacuationCorridor {
+  id              String    @id
+  corridorCode    String    @unique
+  name            String
+  fromLabel       String
+  toSafeZoneId    String?
+  path            Json
+  distanceKm      Float
+  etaMinutes      Int
+  capacityPerHour Int
+  riskScore       Float
+  status          String    @default("PROPOSED")
+  incidentId      String?
+  source          String    @default("deterministic")
+  demo            Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime
+  Incident        Incident? @relation(fields: [incidentId], references: [id])
+  SafeZone        SafeZone? @relation(fields: [toSafeZoneId], references: [id])
+
+  @@index([status])
+}
+
+model GeneratedReport {
+  id         String   @id
+  incidentId String   @unique
+  content    String
+  createdAt  DateTime @default(now())
+  Incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 }
 
 model HazardReport {
-  id            String       @id @default(cuid())
+  id            String       @id
   reportedById  String
   hazardType    HazardType
   description   String
@@ -103,166 +172,106 @@ model HazardReport {
   verifiedAt    DateTime?
   language      String?
   createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  reportedBy    User         @relation("HazardReports", fields: [reportedById], references: [id], onDelete: Cascade)
+  updatedAt     DateTime
+  User          User         @relation(fields: [reportedById], references: [id], onDelete: Cascade)
 
-  @@index([status])
-  @@index([hazardType])
   @@index([clusterKey])
+  @@index([hazardType])
+  @@index([status])
 }
 
-model ShelterFeedback {
-  id            String       @id @default(cuid())
+model Hospital {
+  id            String    @id
+  name          String
+  latitude      Float
+  longitude     Float
+  totalBeds     Int
+  availableBeds Int
+  icuAvailable  Int       @default(0)
+  erLoadPct     Int       @default(0)
+  status        String    @default("ACCEPTING")
   incidentId    String?
-  shelterName   String
-  status        ShelterStatus
-  occupancyPct  Int?
-  waitMinutes   Int?
-  suppliesNote  String?
-  reportedById  String
-  createdAt     DateTime     @default(now())
-  reportedBy    User         @relation("ShelterFeedback", fields: [reportedById], references: [id], onDelete: Cascade)
-
-  @@index([shelterName])
-  @@index([createdAt])
-}
-
-model ReliefRequest {
-  id           String              @id @default(cuid())
-  requestedById String
-  needType     ReliefNeedType
-  quantity     String?
-  urgency      Severity            @default(MEDIUM)
-  notes        String?
-  location     String
-  latitude     Float?
-  longitude    Float?
-  status       ReliefRequestStatus @default(OPEN)
-  incidentId   String?
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  requestedBy  User                @relation("ReliefRequests", fields: [requestedById], references: [id], onDelete: Cascade)
+  source        String    @default("demo")
+  demo          Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime
+  Incident      Incident? @relation(fields: [incidentId], references: [id])
 
   @@index([status])
-  @@index([needType])
-}
-
-model VolunteerRegistration {
-  id            String         @id @default(cuid())
-  userId        String         @unique
-  skills        String
-  availability  String
-  areas         String?
-  hasTransport  Boolean        @default(false)
-  status        VolunteerStatus @default(PENDING)
-  verifiedSafe  Boolean        @default(false)
-  reviewedById  String?
-  reviewNote    String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  user          User           @relation("VolunteerProfile", fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerifiedAlert {
-  id          String   @id @default(cuid())
-  title       String
-  body        String
-  severity    Severity @default(MEDIUM)
-  area        String?
-  incidentId  String?
-  active      Boolean  @default(true)
-  language    String?  // optional language hint for the feed
-  publishedById String
-  publishedBy User     @relation("VerifiedAlerts", fields: [publishedById], references: [id])
-  createdAt   DateTime @default(now())
-  expiresAt   DateTime?
-
-  @@index([active, createdAt])
 }
 
 model Incident {
-  id                     String               @id @default(cuid())
-  incidentCode           String               @unique
-  type                   IncidentType
-  description            String
-  location               String
-  latitude               Float
-  longitude              Float
-  imageMeta              String?
-  status                 IncidentStatus       @default(NEW)
-  duplicateFlag          Boolean              @default(false)
-  citizenName            String?
-  citizenPhone           String?
-  citizenEmail           String?
-  originalDescription    String?
-  transcription          String?
-  language               String?
-  inputMethod            String?
-  locationAccuracy       Float?
-  locationTimestamp      DateTime?
-  aiSeverity             String?
-  aiPeopleAffected       Int?
-  aiUrgentNeeds          String?
-  aiRoadBlocked          Boolean?
-  aiInfrastructureDamage String?
-  aiRiskFactors          String?
-  aiConfidence           Float?
-  aiMissingInfo          String?
-  aiAvailable            Boolean              @default(true)
-  riskScore              Float?
-  riskLevel              RiskLevel?
-  riskReasons            String?
-  weather                String?
-  clusterId              String?
-  assignedResourceId     String?
-  assignedAt             DateTime?
-  acknowledgedAt         DateTime?
-  startedAt              DateTime?
-  arrivedAt              DateTime?
-  resolvedAt             DateTime?
-  escalationLevel        Int                  @default(0)
-  resolutionEmailSent    Boolean              @default(false)
-  resolutionEmailSentAt  DateTime?
-  reportedById           String
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
-  recommendations        AIRecommendation[]
-  approvals              Approval[]
-  emailNotifications     EmailNotification[]
-  report                 GeneratedReport?
-  reportedBy             User                 @relation(fields: [reportedById], references: [id])
-  events                 IncidentEvent[]
-  assignments            ResourceAssignment[]
-  operationalObservations OperationalObservation[]
-  aiInsights             AiInsight[]
-  linksFrom              IncidentLink[] @relation("LinksFrom")
-  linksTo                IncidentLink[] @relation("LinksTo")
-  safeZones              SafeZone[]
-  corridors              EvacuationCorridor[]
-  shipments              Shipment[]
-  missingPersons         MissingPerson[]
-  marketplaceListings    MarketplaceListing[]
-  hospitals              Hospital[]
-  learningEntries        LearningEntry[]
+  id                                                 String                   @id
+  incidentCode                                       String                   @unique
+  type                                               IncidentType
+  description                                        String
+  location                                           String
+  latitude                                           Float
+  longitude                                          Float
+  imageMeta                                          String?
+  status                                             IncidentStatus           @default(NEW)
+  duplicateFlag                                      Boolean                  @default(false)
+  citizenName                                        String?
+  citizenPhone                                       String?
+  citizenEmail                                       String?
+  originalDescription                                String?
+  transcription                                      String?
+  language                                           String?
+  inputMethod                                        String?
+  locationAccuracy                                   Float?
+  locationTimestamp                                  DateTime?
+  aiSeverity                                         String?
+  aiPeopleAffected                                   Int?
+  aiUrgentNeeds                                      String?
+  aiRoadBlocked                                      Boolean?
+  aiInfrastructureDamage                             String?
+  aiRiskFactors                                      String?
+  aiConfidence                                       Float?
+  aiMissingInfo                                      String?
+  aiAvailable                                        Boolean                  @default(true)
+  riskScore                                          Float?
+  riskLevel                                          RiskLevel?
+  riskReasons                                        String?
+  weather                                            String?
+  clusterId                                          String?
+  assignedResourceId                                 String?
+  assignedAt                                         DateTime?
+  acknowledgedAt                                     DateTime?
+  startedAt                                          DateTime?
+  arrivedAt                                          DateTime?
+  resolvedAt                                         DateTime?
+  escalationLevel                                    Int                      @default(0)
+  resolutionEmailSent                                Boolean                  @default(false)
+  resolutionEmailSentAt                              DateTime?
+  reportedById                                       String
+  createdAt                                          DateTime                 @default(now())
+  updatedAt                                          DateTime
+  AIRecommendation                                   AIRecommendation[]
+  AiInsight                                          AiInsight[]
+  Approval                                           Approval[]
+  EmailNotification                                  EmailNotification[]
+  EvacuationCorridor                                 EvacuationCorridor[]
+  GeneratedReport                                    GeneratedReport?
+  Hospital                                           Hospital[]
+  User                                               User                     @relation(fields: [reportedById], references: [id])
+  IncidentEvent                                      IncidentEvent[]
+  IncidentLink_IncidentLink_fromIncidentIdToIncident IncidentLink[]           @relation("IncidentLink_fromIncidentIdToIncident")
+  IncidentLink_IncidentLink_toIncidentIdToIncident   IncidentLink[]           @relation("IncidentLink_toIncidentIdToIncident")
+  LearningEntry                                      LearningEntry[]
+  MarketplaceListing                                 MarketplaceListing[]
+  MissingPerson                                      MissingPerson[]
+  OperationalObservation                             OperationalObservation[]
+  ResourceAssignment                                 ResourceAssignment[]
+  SafeZone                                           SafeZone[]
+  Shipment                                           Shipment[]
 
+  @@index([clusterId])
   @@index([status])
   @@index([type])
-  @@index([clusterId])
-}
-
-model IncidentEvent {
-  id         String   @id @default(cuid())
-  incidentId String
-  eventType  String
-  data       String
-  createdAt  DateTime @default(now())
-  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-
-  @@index([incidentId])
 }
 
 model IncidentCluster {
-  id             String       @id @default(cuid())
+  id             String       @id
   clusterCode    String       @unique
   type           IncidentType
   confidence     Float
@@ -270,522 +279,77 @@ model IncidentCluster {
   geoSpreadKm    Float
   latestReportAt DateTime
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  updatedAt      DateTime
 }
 
-model Resource {
-  id           String               @id @default(cuid())
-  resourceCode String               @unique
-  name         String
-  type         ResourceType
-  latitude     Float
-  longitude    Float
-  capacity     Int
-  status       ResourceStatus       @default(AVAILABLE)
-  eta          Int?
-  lastUpdated  DateTime             @default(now())
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
-  assignments  ResourceAssignment[]
-
-  @@index([status])
-  @@index([type])
-}
-
-model ResourceAssignment {
-  id           String    @id @default(cuid())
-  resourceId   String
-  incidentId   String
-  status       String    @default("ASSIGNED")
-  isPrimary    Boolean   @default(true)
-  reason       String?
-  assignedById String?
-  assignedAt   DateTime  @default(now())
-  replacedAt   DateTime?
-  responder    User?     @relation(fields: [assignedById], references: [id])
-  incident     Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  resource     Resource  @relation(fields: [resourceId], references: [id])
-
-  @@index([resourceId])
-  @@index([incidentId])
-}
-
-model Approval {
-  id             String           @id @default(cuid())
-  incidentId     String
-  resourceId     String?
-  recommendation String
-  decision       ApprovalDecision @default(PENDING)
-  reviewerId     String?
-  reason         String?
-  reviewedAt     DateTime?
-  createdAt      DateTime         @default(now())
-  incident       Incident         @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  reviewer       User?            @relation(fields: [reviewerId], references: [id])
-
-  @@index([decision])
-}
-
-model AIRecommendation {
-  id         String   @id @default(cuid())
+model IncidentEvent {
+  id         String   @id
   incidentId String
-  recType    String
-  payload    String
-  source     String   @default("ai")
-  createdAt  DateTime @default(now())
-  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-
-  @@index([incidentId])
-}
-
-model Notification {
-  id        String           @id @default(cuid())
-  userId    String?
-  message   String
-  createdAt DateTime         @default(now())
-  entityId  String?
-  read      Boolean          @default(false)
-  type      NotificationType
-  user      User?            @relation(fields: [userId], references: [id])
-
-  @@index([read])
-  @@index([userId])
-}
-
-model AuditLog {
-  id            String   @id @default(cuid())
-  timestamp     DateTime @default(now())
-  userId        String?
-  role          String?
-  action        String
-  entityId      String?
-  previousState String?
-  newState      String?
-  reason        String?
-  user          User?    @relation(fields: [userId], references: [id])
-
-  @@index([action])
-}
-
-model GeneratedReport {
-  id         String   @id @default(cuid())
-  incidentId String   @unique
-  content    String
-  createdAt  DateTime @default(now())
-  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-}
-
-model EmailNotification {
-  id              String      @id @default(cuid())
-  incidentId      String
-  recipientEmail  String
-  recipientUserId String?
-  emailType       EmailType
-  subject         String
-  status          EmailStatus @default(PENDING)
-  sentAt          DateTime?
-  errorMessage    String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  incident        Incident    @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-
-  @@index([incidentId])
-  @@index([recipientUserId])
-  @@index([status])
-}
-
-model OtpVerification {
-  id          String    @id @default(cuid())
-  identifier  String
-  channel     String
-  purpose     String
-  codeHash    String
-  expiresAt   DateTime
-  attempts    Int       @default(0)
-  maxAttempts Int       @default(5)
-  consumed    Boolean   @default(false)
-  consumedAt  DateTime?
-  userId      String?
-  createdAt   DateTime  @default(now())
-  user        User?     @relation(fields: [userId], references: [id])
-
-  @@index([identifier, purpose])
-  @@index([expiresAt])
-}
-
-model NotificationLog {
-  id               String    @id @default(cuid())
-  userId           String?
-  incidentId       String?
-  notificationType String
-  channel          String
-  recipient        String
-  title            String
-  message          String
-  status           String    @default("PENDING")
-  sentAt           DateTime?
-  readAt           DateTime?
-  errorMessage     String?
-  createdAt        DateTime  @default(now())
-  user             User?     @relation(fields: [userId], references: [id])
-
-  @@index([userId])
-  @@index([incidentId])
-  @@index([notificationType])
-  @@index([status])
-}
-
-model SimulationRun {
-  id        String            @id @default(cuid())
-  scenario  String
-  status    SimulationStatus  @default(RUNNING)
-  config    String
-  metrics   String?
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  events    SimulationEvent[]
-
-  @@index([scenario])
-}
-
-model SimulationEvent {
-  id         String        @id @default(cuid())
-  runId      String
-  simTimeMin Int
   eventType  String
-  label      String
   data       String
-  createdAt  DateTime      @default(now())
-  run        SimulationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  Incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
-  @@index([runId])
-}
-
-enum Role {
-  CITIZEN
-  RESPONDER
-  DISASTER_OFFICER
-  ADMIN
-}
-
-enum IncidentType {
-  FLOOD
-  CYCLONE
-  EARTHQUAKE
-  LANDSLIDE
-  ROAD_BLOCKAGE
-  FIRE
-  MEDICAL
-  INFRASTRUCTURE
-  BUILDING_COLLAPSE
-  FOREST_FIRE
-  HEAVY_RAINFALL
-  INDUSTRIAL_ACCIDENT
-  OTHER
-}
-
-enum IncidentStatus {
-  NEW
-  ANALYZING
-  VERIFICATION
-  PRIORITIZED
-  AWAITING_APPROVAL
-  ASSIGNED
-  IN_PROGRESS
-  DELAYED
-  ESCALATED
-  RESOLVED
-  CLOSED
-}
-
-enum RiskLevel {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
-enum ResourceType {
-  AMBULANCE
-  RESCUE_TEAM
-  FIRE_TEAM
-  EMERGENCY_VEHICLE
-  MEDICAL_SUPPLY
-  FOOD_SUPPLY
-  WATER_SUPPLY
-}
-
-enum ResourceStatus {
-  AVAILABLE
-  ASSIGNED
-  EN_ROUTE
-  ON_SCENE
-  UNAVAILABLE
-}
-
-enum ApprovalDecision {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum NotificationType {
-  INFO
-  WARNING
-  CRITICAL
-  APPROVAL_REQUIRED
-  ESCALATION
-  RESOLUTION
-}
-
-enum EmailType {
-  CITIZEN_RESOLUTION_REPORT
-  OFFICER_RESOLUTION_REPORT
-}
-
-enum EmailStatus {
-  PENDING
-  SENT
-  FAILED
-}
-
-enum SimulationStatus {
-  RUNNING
-  COMPLETED
-  FAILED
-}
-
-// ─── Citizen Safety Suite enums ──────────────────────────────────────────────
-
-enum Severity {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
-enum HazardType {
-  FLOODING
-  BLOCKED_ROAD
-  DEBRIS
-  DOWNED_POWER_LINE
-  FIRE
-  STRUCTURAL_DAMAGE
-  LANDSLIDE
-  OTHER
-}
-
-enum HazardStatus {
-  REPORTED
-  CONFIRMED
-  RESOLVED
-  DISMISSED
-}
-
-enum ShelterStatus {
-  OPEN
-  CROWDED
-  FULL
-  CLOSED
-}
-
-enum ReliefNeedType {
-  FOOD
-  WATER
-  MEDICAL
-  SHELTER
-  CLOTHING
-  RESCUE
-  POWER
-  OTHER
-}
-
-enum ReliefRequestStatus {
-  OPEN
-  ACKNOWLEDGED
-  FULFILLED
-  CANCELLED
-}
-
-enum VolunteerStatus {
-  PENDING
-  APPROVED
-  ACTIVE
-  INACTIVE
-  REJECTED
-}
-
-// Versioned operational inputs; payload validated by the discriminated Zod schema.
-// Append-only observations retain provenance without altering dispatch records.
-model OperationalObservation {
-  id          String   @id @default(cuid())
-  incidentId  String
-  createdById String
-  kind        String
-  recordCode  String
-  payload     Json
-  simulated   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  createdBy   User     @relation(fields: [createdById], references: [id])
-
-  @@index([incidentId, kind, recordCode, createdAt])
-}
-
-// ===== Advanced AI Command-Center models (SIH upgrade) =====
-
-// Generic store for per-incident AI insights: trust score, cascade detection,
-// crowd-movement risk, evidence analysis, conflict resolution, workload risk,
-// explainability, demand, safe zones, corridors, spoilage, blackout.
-model AiInsight {
-  id          String    @id @default(cuid())
-  incidentId  String?
-  feature     String
-  severity    RiskLevel @default(LOW)
-  confidence  Float?
-  payload     Json
-  source      String    @default("deterministic")
-  demo        Boolean   @default(false)
-  status      String    @default("ACTIVE")
-  createdById String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  incident    Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  createdBy   User?     @relation("AiInsights", fields: [createdById], references: [id])
-
-  @@index([feature, status])
   @@index([incidentId])
 }
 
-// Directed relationship edge between two incidents (relationship graph + cascade).
 model IncidentLink {
-  id             String   @id @default(cuid())
-  fromIncidentId String
-  toIncidentId   String
-  relation       String
-  strength       Float    @default(0.5)
-  explanation    String?
-  source         String   @default("deterministic")
-  createdAt      DateTime @default(now())
-  fromIncident   Incident @relation("LinksFrom", fields: [fromIncidentId], references: [id], onDelete: Cascade)
-  toIncident     Incident @relation("LinksTo", fields: [toIncidentId], references: [id], onDelete: Cascade)
+  id                                             String   @id
+  fromIncidentId                                 String
+  toIncidentId                                   String
+  relation                                       String
+  strength                                       Float    @default(0.5)
+  explanation                                    String?
+  source                                         String   @default("deterministic")
+  createdAt                                      DateTime @default(now())
+  Incident_IncidentLink_fromIncidentIdToIncident Incident @relation("IncidentLink_fromIncidentIdToIncident", fields: [fromIncidentId], references: [id], onDelete: Cascade)
+  Incident_IncidentLink_toIncidentIdToIncident   Incident @relation("IncidentLink_toIncidentIdToIncident", fields: [toIncidentId], references: [id], onDelete: Cascade)
 
   @@unique([fromIncidentId, toIncidentId, relation])
   @@index([fromIncidentId])
   @@index([toIncidentId])
 }
 
-// Dynamic safe-zone (shelter) generated from incident geography + capacity model.
-model SafeZone {
-  id         String    @id @default(cuid())
-  name       String
-  zoneCode   String    @unique
-  type       String
-  latitude   Float
-  longitude  Float
-  capacity   Int
-  occupancy  Int       @default(0)
-  riskLevel  RiskLevel @default(LOW)
-  status     String    @default("OPEN")
-  amenities  String?
-  incidentId String?
-  source     String    @default("deterministic")
-  demo       Boolean   @default(false)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  incident   Incident? @relation(fields: [incidentId], references: [id])
-  corridors  EvacuationCorridor[]
-
-  @@index([status])
-}
-
-// Evacuation corridor plan between a hazard area and a safe zone.
-model EvacuationCorridor {
-  id              String    @id @default(cuid())
-  corridorCode    String    @unique
-  name            String
-  fromLabel       String
-  toSafeZoneId    String?
-  path            Json
-  distanceKm      Float
-  etaMinutes      Int
-  capacityPerHour Int
-  riskScore       Float
-  status          String    @default("PROPOSED")
-  incidentId      String?
-  source          String    @default("deterministic")
-  demo            Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  safeZone        SafeZone? @relation(fields: [toSafeZoneId], references: [id])
-  incident        Incident? @relation(fields: [incidentId], references: [id])
-
-  @@index([status])
-}
-
-// Perishable relief stock lot with spoilage prediction.
-model ResourceExpiry {
-  id             String       @id @default(cuid())
-  batchCode      String       @unique
-  name           String
-  type           ResourceType
-  quantity       Int
-  unit           String       @default("units")
-  storageSite    String
-  expiresAt      DateTime
-  spoilageRisk   Float?
+model LearningEntry {
+  id             String    @id
+  incidentId     String?
+  category       String
+  lesson         String
   recommendation String?
-  resourceId     String?
-  source         String       @default("deterministic")
-  demo           Boolean      @default(false)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  @@index([expiresAt])
-}
-
-// Relief supply-chain shipment with step-level tracking.
-model Shipment {
-  id           String    @id @default(cuid())
-  shipmentCode String    @unique
-  description  String
-  origin       String
-  destination  String
-  incidentId   String?
-  status       String    @default("PREPARING")
-  currentStep  Int       @default(0)
-  eta          DateTime?
-  steps        Json
-  source       String    @default("deterministic")
-  demo         Boolean   @default(false)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  incident     Incident? @relation(fields: [incidentId], references: [id])
+  confidence     Float?
+  source         String    @default("deterministic")
+  status         String    @default("OPEN")
+  createdAt      DateTime  @default(now())
+  Incident       Incident? @relation(fields: [incidentId], references: [id])
 
   @@index([status])
 }
 
+model MarketplaceListing {
+  id            String       @id
+  listingCode   String       @unique
+  kind          String       @default("OFFER")
+  agencyName    String
+  resourceType  ResourceType
+  quantity      Int
+  unit          String       @default("units")
+  pricePerUnit  Float?
+  notes         String?
+  status        String       @default("OPEN")
+  matchedWithId String?
+  incidentId    String?
+  listedById    String?
+  demo          Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime
+  Incident      Incident?    @relation(fields: [incidentId], references: [id])
+  User          User?        @relation(fields: [listedById], references: [id])
 
-// Predictive demand forecast per region + resource type.
-model DemandForecast {
-  id              String       @id @default(cuid())
-  region          String
-  resourceType    ResourceType
-  horizonHours    Int          @default(24)
-  predictedDemand Int
-  currentSupply   Int
-  gap             Int
-  confidence      Float
-  source          String       @default("deterministic")
-  demo            Boolean      @default(false)
-  createdAt       DateTime     @default(now())
-
-  @@index([region, resourceType])
+  @@index([status])
 }
 
-// Missing-person report with AI priority scoring.
 model MissingPerson {
-  id               String    @id @default(cuid())
+  id               String    @id
   fullName         String
   age              Int?
   gender           String?
@@ -806,77 +370,351 @@ model MissingPerson {
   source           String    @default("deterministic")
   demo             Boolean   @default(false)
   createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  reportedBy       User      @relation("MissingPersonReports", fields: [reportedById], references: [id])
-  incident         Incident? @relation(fields: [incidentId], references: [id])
+  updatedAt        DateTime
+  Incident         Incident? @relation(fields: [incidentId], references: [id])
+  User             User      @relation(fields: [reportedById], references: [id])
 
   @@index([status])
 }
 
-// Inter-agency marketplace listing (offer or request).
-model MarketplaceListing {
-  id            String       @id @default(cuid())
-  listingCode   String       @unique
-  kind          String       @default("OFFER")
-  agencyName    String
-  resourceType  ResourceType
-  quantity      Int
-  unit          String       @default("units")
-  pricePerUnit  Float?
+model Notification {
+  id        String           @id
+  userId    String?
+  message   String
+  createdAt DateTime         @default(now())
+  entityId  String?
+  read      Boolean          @default(false)
+  type      NotificationType
+  User      User?            @relation(fields: [userId], references: [id])
+
+  @@index([read])
+  @@index([userId])
+}
+
+model NotificationLog {
+  id               String    @id
+  userId           String?
+  incidentId       String?
+  notificationType String
+  channel          String
+  recipient        String
+  title            String
+  message          String
+  status           String    @default("PENDING")
+  sentAt           DateTime?
+  readAt           DateTime?
+  errorMessage     String?
+  createdAt        DateTime  @default(now())
+  User             User?     @relation(fields: [userId], references: [id])
+
+  @@index([incidentId])
+  @@index([notificationType])
+  @@index([status])
+  @@index([userId])
+}
+
+model OperationalObservation {
+  id          String   @id
+  incidentId  String
+  createdById String
+  kind        String
+  recordCode  String
+  payload     Json
+  simulated   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  User        User     @relation(fields: [createdById], references: [id])
+  Incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, kind, recordCode, createdAt])
+}
+
+model OtpVerification {
+  id          String    @id
+  identifier  String
+  channel     String
+  purpose     String
+  codeHash    String
+  expiresAt   DateTime
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  consumed    Boolean   @default(false)
+  consumedAt  DateTime?
+  userId      String?
+  createdAt   DateTime  @default(now())
+  User        User?     @relation(fields: [userId], references: [id])
+
+  @@index([expiresAt])
+  @@index([identifier, purpose])
+}
+
+model ReliefRequest {
+  id            String              @id
+  requestedById String
+  needType      ReliefNeedType
+  quantity      String?
+  urgency       Severity            @default(MEDIUM)
   notes         String?
-  status        String       @default("OPEN")
-  matchedWithId String?
+  location      String
+  latitude      Float?
+  longitude     Float?
+  status        ReliefRequestStatus @default(OPEN)
   incidentId    String?
-  listedById    String?
-  demo          Boolean      @default(false)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  listedBy      User?        @relation("MarketplaceListings", fields: [listedById], references: [id])
-  incident      Incident?    @relation(fields: [incidentId], references: [id])
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime
+  User          User                @relation(fields: [requestedById], references: [id], onDelete: Cascade)
+
+  @@index([needType])
+  @@index([status])
+}
+
+model Resource {
+  id                 String               @id
+  resourceCode       String               @unique
+  name               String
+  type               ResourceType
+  latitude           Float
+  longitude          Float
+  capacity           Int
+  status             ResourceStatus       @default(AVAILABLE)
+  eta                Int?
+  lastUpdated        DateTime             @default(now())
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  ResourceAssignment ResourceAssignment[]
+
+  @@index([status])
+  @@index([type])
+}
+
+model ResourceAssignment {
+  id           String    @id
+  resourceId   String
+  incidentId   String
+  status       String    @default("ASSIGNED")
+  isPrimary    Boolean   @default(true)
+  reason       String?
+  assignedById String?
+  assignedAt   DateTime  @default(now())
+  replacedAt   DateTime?
+  User         User?     @relation(fields: [assignedById], references: [id])
+  Incident     Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  Resource     Resource  @relation(fields: [resourceId], references: [id])
+
+  @@index([incidentId])
+  @@index([resourceId])
+}
+
+model ResourceExpiry {
+  id             String       @id
+  batchCode      String       @unique
+  name           String
+  type           ResourceType
+  quantity       Int
+  unit           String       @default("units")
+  storageSite    String
+  expiresAt      DateTime
+  spoilageRisk   Float?
+  recommendation String?
+  resourceId     String?
+  source         String       @default("deterministic")
+  demo           Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+
+  @@index([expiresAt])
+}
+
+model SafeCheckIn {
+  id           String   @id
+  userId       String
+  isSafe       Boolean  @default(true)
+  message      String?
+  latitude     Float?
+  longitude    Float?
+  locationName String?
+  sharedWith   Json?
+  createdAt    DateTime @default(now())
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model SafeZone {
+  id                 String               @id
+  name               String
+  zoneCode           String               @unique
+  type               String
+  latitude           Float
+  longitude          Float
+  capacity           Int
+  occupancy          Int                  @default(0)
+  riskLevel          RiskLevel            @default(LOW)
+  status             String               @default("OPEN")
+  amenities          String?
+  incidentId         String?
+  source             String               @default("deterministic")
+  demo               Boolean              @default(false)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  EvacuationCorridor EvacuationCorridor[]
+  Incident           Incident?            @relation(fields: [incidentId], references: [id])
 
   @@index([status])
 }
 
-// Hospital node for the load balancer.
-model Hospital {
-  id            String    @id @default(cuid())
-  name          String
-  latitude      Float
-  longitude     Float
-  totalBeds     Int
-  availableBeds Int
-  icuAvailable  Int       @default(0)
-  erLoadPct     Int       @default(0)
-  status        String    @default("ACCEPTING")
+model SafetyContact {
+  id                 String    @id
+  ownerId            String
+  name               String
+  phone              String
+  relation           String    @default("FAMILY")
+  isPrimary          Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  email              String?
+  emailVerified      Boolean   @default(false)
+  lastNotificationAt DateTime?
+  notificationStatus String?
+  User               User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+}
+
+model ShelterFeedback {
+  id           String        @id
+  incidentId   String?
+  shelterName  String
+  status       ShelterStatus
+  occupancyPct Int?
+  waitMinutes  Int?
+  suppliesNote String?
+  reportedById String
+  createdAt    DateTime      @default(now())
+  User         User          @relation(fields: [reportedById], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([shelterName])
+}
+
+model Shipment {
+  id           String    @id
+  shipmentCode String    @unique
+  description  String
+  origin       String
+  destination  String
+  incidentId   String?
+  status       String    @default("PREPARING")
+  currentStep  Int       @default(0)
+  eta          DateTime?
+  steps        Json
+  source       String    @default("deterministic")
+  demo         Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime
+  Incident     Incident? @relation(fields: [incidentId], references: [id])
+
+  @@index([status])
+}
+
+model SimulationEvent {
+  id            String        @id
+  runId         String
+  simTimeMin    Int
+  eventType     String
+  label         String
+  data          String
+  createdAt     DateTime      @default(now())
+  SimulationRun SimulationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+}
+
+model SimulationRun {
+  id              String            @id
+  scenario        String
+  status          SimulationStatus  @default(RUNNING)
+  config          String
+  metrics         String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  SimulationEvent SimulationEvent[]
+
+  @@index([scenario])
+}
+
+model User {
+  id                     String                   @id
+  email                  String                   @unique
+  phone                  String?
+  name                   String
+  emailVerified          Boolean                  @default(false)
+  phoneVerified          Boolean                  @default(false)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime
+  active                 Boolean                  @default(true)
+  emailNotifications     Boolean                  @default(true)
+  inAppNotifications     Boolean                  @default(true)
+  passwordHash           String?
+  smsNotifications       Boolean                  @default(true)
+  role                   Role                     @default(CITIZEN)
+  AiInsight              AiInsight[]
+  Approval               Approval[]
+  AuditLog               AuditLog[]
+  CommsBlackout          CommsBlackout[]
+  HazardReport           HazardReport[]
+  Incident               Incident[]
+  MarketplaceListing     MarketplaceListing[]
+  MissingPerson          MissingPerson[]
+  Notification           Notification[]
+  NotificationLog        NotificationLog[]
+  OperationalObservation OperationalObservation[]
+  OtpVerification        OtpVerification[]
+  ReliefRequest          ReliefRequest[]
+  ResourceAssignment     ResourceAssignment[]
+  SafeCheckIn            SafeCheckIn[]
+  SafetyContact          SafetyContact[]
+  ShelterFeedback        ShelterFeedback[]
+  VerifiedAlert          VerifiedAlert[]
+  VolunteerRegistration  VolunteerRegistration?
+  WhatIfRun              WhatIfRun[]
+
+  @@index([phone])
+}
+
+model VerifiedAlert {
+  id            String    @id
+  title         String
+  body          String
+  severity      Severity  @default(MEDIUM)
+  area          String?
   incidentId    String?
-  source        String    @default("demo")
-  demo          Boolean   @default(true)
+  active        Boolean   @default(true)
+  language      String?
+  publishedById String
   createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  incident      Incident? @relation(fields: [incidentId], references: [id])
+  expiresAt     DateTime?
+  User          User      @relation(fields: [publishedById], references: [id])
 
-  @@index([status])
+  @@index([active, createdAt])
 }
 
-// Emergency communication blackout (network outage mode).
-model CommsBlackout {
-  id              String    @id @default(cuid())
-  mode            String    @default("PARTIAL")
-  reason          String
-  affectedRegions Json?
-  active          Boolean   @default(true)
-  startedById     String?
-  startedAt       DateTime  @default(now())
-  endsAt          DateTime?
-  demo            Boolean   @default(false)
-  startedBy       User?     @relation("CommsBlackouts", fields: [startedById], references: [id])
-
-  @@index([active])
+model VolunteerRegistration {
+  id           String          @id
+  userId       String          @unique
+  skills       String
+  availability String
+  areas        String?
+  hasTransport Boolean         @default(false)
+  status       VolunteerStatus @default(PENDING)
+  verifiedSafe Boolean         @default(false)
+  reviewedById String?
+  reviewNote   String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime
+  User         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// What-If disaster simulator run (parameterised, AI-enriched).
 model WhatIfRun {
-  id          String   @id @default(cuid())
+  id          String   @id
   name        String
   params      Json
   results     Json?
@@ -885,23 +723,159 @@ model WhatIfRun {
   demo        Boolean  @default(false)
   createdById String?
   createdAt   DateTime @default(now())
-  createdBy   User?    @relation("WhatIfRuns", fields: [createdById], references: [id])
+  User        User?    @relation(fields: [createdById], references: [id])
 
   @@index([createdAt])
 }
 
-// Post-disaster AI learning loop entry.
-model LearningEntry {
-  id             String    @id @default(cuid())
-  incidentId     String?
-  category       String
-  lesson         String
-  recommendation String?
-  confidence     Float?
-  source         String    @default("deterministic")
-  status         String    @default("OPEN")
-  createdAt      DateTime  @default(now())
-  incident       Incident? @relation(fields: [incidentId], references: [id])
+enum ApprovalDecision {
+  PENDING
+  APPROVED
+  REJECTED
+}
 
-  @@index([status])
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum EmailType {
+  CITIZEN_RESOLUTION_REPORT
+  OFFICER_RESOLUTION_REPORT
+}
+
+enum HazardStatus {
+  REPORTED
+  CONFIRMED
+  RESOLVED
+  DISMISSED
+}
+
+enum HazardType {
+  FLOODING
+  BLOCKED_ROAD
+  DEBRIS
+  DOWNED_POWER_LINE
+  FIRE
+  STRUCTURAL_DAMAGE
+  LANDSLIDE
+  OTHER
+}
+
+enum IncidentStatus {
+  NEW
+  ANALYZING
+  VERIFICATION
+  PRIORITIZED
+  AWAITING_APPROVAL
+  ASSIGNED
+  IN_PROGRESS
+  DELAYED
+  ESCALATED
+  RESOLVED
+  CLOSED
+}
+
+enum IncidentType {
+  FLOOD
+  CYCLONE
+  EARTHQUAKE
+  LANDSLIDE
+  ROAD_BLOCKAGE
+  FIRE
+  MEDICAL
+  INFRASTRUCTURE
+  OTHER
+  BUILDING_COLLAPSE
+  FOREST_FIRE
+  HEAVY_RAINFALL
+  INDUSTRIAL_ACCIDENT
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  CRITICAL
+  APPROVAL_REQUIRED
+  ESCALATION
+  RESOLUTION
+}
+
+enum ReliefNeedType {
+  FOOD
+  WATER
+  MEDICAL
+  SHELTER
+  CLOTHING
+  RESCUE
+  POWER
+  OTHER
+}
+
+enum ReliefRequestStatus {
+  OPEN
+  ACKNOWLEDGED
+  FULFILLED
+  CANCELLED
+}
+
+enum ResourceStatus {
+  AVAILABLE
+  ASSIGNED
+  EN_ROUTE
+  ON_SCENE
+  UNAVAILABLE
+}
+
+enum ResourceType {
+  AMBULANCE
+  RESCUE_TEAM
+  FIRE_TEAM
+  EMERGENCY_VEHICLE
+  MEDICAL_SUPPLY
+  FOOD_SUPPLY
+  WATER_SUPPLY
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum Role {
+  CITIZEN
+  RESPONDER
+  DISASTER_OFFICER
+  ADMIN
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ShelterStatus {
+  OPEN
+  CROWDED
+  FULL
+  CLOSED
+}
+
+enum SimulationStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum VolunteerStatus {
+  PENDING
+  APPROVED
+  ACTIVE
+  INACTIVE
+  REJECTED
 }
