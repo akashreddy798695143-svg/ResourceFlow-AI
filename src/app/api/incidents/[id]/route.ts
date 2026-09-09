@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
         assignments: { orderBy: { assignedAt: 'asc' } },
         recommendations: { orderBy: { createdAt: 'desc' } },
         report: true,
-        reportedBy: { select: { name: true } },
+        User: { select: { name: true } },
       },
     })
     if (!incident) return err('Incident not found', 404)

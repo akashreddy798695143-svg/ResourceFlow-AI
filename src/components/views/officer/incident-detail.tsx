@@ -247,7 +247,7 @@ export function IncidentDetailView() {
               <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3 space-y-1">
                 <p className="text-[10px] font-semibold uppercase text-muted-foreground">Citizen Contact</p>
                 <div className="flex flex-wrap items-center gap-3 text-xs">
-                  <span className="flex items-center gap-1.5"><User className="h-3 w-3 text-muted-foreground" /> {incident.citizenName || incident.reportedBy?.name || '—'}</span>
+                  <span className="flex items-center gap-1.5"><User className="h-3 w-3 text-muted-foreground" /> {incident.citizenName || incident.User?.name || '—'}</span>
                   {incident.citizenEmail && (
                     <span className="flex items-center gap-1.5 text-muted-foreground"><Mail className="h-3 w-3" /> {incident.citizenEmail}</span>
                   )}

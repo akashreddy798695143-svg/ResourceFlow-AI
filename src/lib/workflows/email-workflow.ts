@@ -57,7 +57,7 @@ export async function sendResolutionEmails(incidentId: string, resolvedByUserId?
     const incident = await db.incident.findUnique({
       where: { id: incidentId },
       include: {
-        reportedBy: true,
+        User: true,
         events: { orderBy: { createdAt: 'asc' } },
         assignments: { orderBy: { assignedAt: 'asc' } },
         recommendations: { orderBy: { createdAt: 'asc' } },
@@ -107,9 +107,9 @@ export async function sendResolutionEmails(incidentId: string, resolvedByUserId?
     })
 
     // ─── 1) Citizen public report email ─────────────────────────
-    if (incident.reportedBy?.email) {
+    if (incident.User?.email) {
       const { subject, html } = renderCitizenReportEmail(publicData)
-      const citizenEmail = incident.reportedBy.email
+      const citizenEmail = incident.User.email
 
       // Create PENDING EmailNotification row first
       const notif = await db.emailNotification.create({
@@ -387,7 +387,7 @@ export async function retryResolutionEmail(
   // Re-fetch the incident to rebuild the email
   const incident = await db.incident.findUnique({
     where: { id: incidentId },
-    include: { reportedBy: true, events: { orderBy: { createdAt: 'asc' } }, assignments: { orderBy: { assignedAt: 'asc' } }, recommendations: true, approvals: true },
+    include: { User: true, events: { orderBy: { createdAt: 'asc' } }, assignments: { orderBy: { assignedAt: 'asc' } }, recommendations: true, approvals: true },
   })
   if (!incident) return { ok: false, error: 'Incident not found' }
 

@@ -53,8 +53,8 @@ async function dispatchIncidentEventNotification(
     })
     // Citizen dispatch — only if not officerOnly, and with a public-safe email
     if (!content.officerOnly) {
-      const incident = await db.incident.findUnique({ where: { id: incidentId }, include: { reportedBy: true } })
-      if (incident?.reportedBy) {
+      const incident = await db.incident.findUnique({ where: { id: incidentId }, include: { User: true } })
+      if (incident?.User) {
         const citizenRecipient = await getUserRecipient(incident.reportedById)
         if (citizenRecipient) {
           // Build a public-safe email (no AI confidence, risk factors, resource details)

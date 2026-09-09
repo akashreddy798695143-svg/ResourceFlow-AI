@@ -167,7 +167,7 @@ export async function GET(req: NextRequest) {
       where,
       orderBy,
       take: limit,
-      include: { reportedBy: { select: { name: true } } },
+      include: { User: { select: { name: true } } },
     })
     return ok({ incidents })
   } catch (e) {

@@ -54,7 +54,7 @@ export async function GET(req: Request) {
         const rows = await db.missingPerson.findMany({
           where: incidentId ? { incidentId } : {},
           orderBy: { priorityScore: 'desc' }, take: 100,
-          include: { incident: { select: { incidentCode: true } } },
+          include: { Incident: { select: { incidentCode: true } } },
         })
         const officer = roleAllows('advanced:act', user.role)
         return NextResponse.json({

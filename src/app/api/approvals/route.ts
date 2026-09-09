@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
       where: { decision: decision as any },
       orderBy: { createdAt: 'desc' },
       include: {
-        incident: {
+        Incident: {
           select: {
             incidentCode: true, type: true, location: true, riskLevel: true, riskScore: true,
             description: true, language: true, inputMethod: true, originalDescription: true,

@@ -27,7 +27,7 @@ export async function GET() {
         where: { createdAt: { gte: since } },
         orderBy: { createdAt: 'desc' },
         take: 200,
-        include: { reportedBy: { select: { name: true, phone: true } } },
+        include: { User: { select: { name: true, phone: true } } },
       }),
       db.reliefRequest.findMany({
         where: { status: { in: ['OPEN', 'ACKNOWLEDGED'] }, createdAt: { gte: since } },
@@ -61,7 +61,7 @@ export async function GET() {
         confirmCount: h.confirmCount,
         verified: h.verified,
         duplicateOfId: h.duplicateOfId,
-        reportedBy: { name: maskName(h.reportedBy?.name), phone: maskPhone(h.reportedBy?.phone) },
+        reportedBy: { name: maskName(h.User?.name), phone: maskPhone(h.User?.phone) },
         priorityScore: scoreReportPriority({ severity: h.severity, confirmCount: h.confirmCount, aiConfidence: h.aiConfidence, createdAt: h.createdAt, status: h.status }),
         createdAt: h.createdAt,
       }))

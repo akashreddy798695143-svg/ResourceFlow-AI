@@ -8,7 +8,7 @@ datasource db {
 }
 
 model AIRecommendation {
-  id         String   @id
+  id         String   @id @default(cuid())
   incidentId String
   recType    String
   payload    String
@@ -20,7 +20,7 @@ model AIRecommendation {
 }
 
 model AiInsight {
-  id          String    @id
+  id          String    @id @default(cuid())
   incidentId  String?
   feature     String
   severity    RiskLevel @default(LOW)
@@ -31,7 +31,7 @@ model AiInsight {
   status      String    @default("ACTIVE")
   createdById String?
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime
+  updatedAt              DateTime                 @default(now())
   User        User?     @relation(fields: [createdById], references: [id])
   Incident    Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
@@ -40,7 +40,7 @@ model AiInsight {
 }
 
 model Approval {
-  id             String           @id
+  id             String           @id @default(cuid())
   incidentId     String
   resourceId     String?
   recommendation String
@@ -56,7 +56,7 @@ model Approval {
 }
 
 model AuditLog {
-  id            String   @id
+  id            String   @id @default(cuid())
   timestamp     DateTime @default(now())
   userId        String?
   role          String?
@@ -71,7 +71,7 @@ model AuditLog {
 }
 
 model CommsBlackout {
-  id              String    @id
+  id              String    @id @default(cuid())
   mode            String    @default("PARTIAL")
   reason          String
   affectedRegions Json?
@@ -86,7 +86,7 @@ model CommsBlackout {
 }
 
 model DemandForecast {
-  id              String       @id
+  id              String       @id @default(cuid())
   region          String
   resourceType    ResourceType
   horizonHours    Int          @default(24)
@@ -102,7 +102,7 @@ model DemandForecast {
 }
 
 model EmailNotification {
-  id              String      @id
+  id              String      @id @default(cuid())
   incidentId      String
   recipientEmail  String
   recipientUserId String?
@@ -112,7 +112,7 @@ model EmailNotification {
   sentAt          DateTime?
   errorMessage    String?
   createdAt       DateTime    @default(now())
-  updatedAt       DateTime
+  updatedAt              DateTime                 @default(now())
   Incident        Incident    @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
   @@index([incidentId])
@@ -121,7 +121,7 @@ model EmailNotification {
 }
 
 model EvacuationCorridor {
-  id              String    @id
+  id              String    @id @default(cuid())
   corridorCode    String    @unique
   name            String
   fromLabel       String
@@ -136,7 +136,7 @@ model EvacuationCorridor {
   source          String    @default("deterministic")
   demo            Boolean   @default(false)
   createdAt       DateTime  @default(now())
-  updatedAt       DateTime
+  updatedAt              DateTime                 @default(now())
   Incident        Incident? @relation(fields: [incidentId], references: [id])
   SafeZone        SafeZone? @relation(fields: [toSafeZoneId], references: [id])
 
@@ -144,7 +144,7 @@ model EvacuationCorridor {
 }
 
 model GeneratedReport {
-  id         String   @id
+  id         String   @id @default(cuid())
   incidentId String   @unique
   content    String
   createdAt  DateTime @default(now())
@@ -152,7 +152,7 @@ model GeneratedReport {
 }
 
 model HazardReport {
-  id            String       @id
+  id            String       @id @default(cuid())
   reportedById  String
   hazardType    HazardType
   description   String
@@ -172,7 +172,7 @@ model HazardReport {
   verifiedAt    DateTime?
   language      String?
   createdAt     DateTime     @default(now())
-  updatedAt     DateTime
+  updatedAt              DateTime                 @default(now())
   User          User         @relation(fields: [reportedById], references: [id], onDelete: Cascade)
 
   @@index([clusterKey])
@@ -181,7 +181,7 @@ model HazardReport {
 }
 
 model Hospital {
-  id            String    @id
+  id            String    @id @default(cuid())
   name          String
   latitude      Float
   longitude     Float
@@ -194,14 +194,14 @@ model Hospital {
   source        String    @default("demo")
   demo          Boolean   @default(true)
   createdAt     DateTime  @default(now())
-  updatedAt     DateTime
+  updatedAt              DateTime                 @default(now())
   Incident      Incident? @relation(fields: [incidentId], references: [id])
 
   @@index([status])
 }
 
 model Incident {
-  id                                                 String                   @id
+  id                                                 String                   @id @default(cuid())
   incidentCode                                       String                   @unique
   type                                               IncidentType
   description                                        String
@@ -245,7 +245,7 @@ model Incident {
   resolutionEmailSentAt                              DateTime?
   reportedById                                       String
   createdAt                                          DateTime                 @default(now())
-  updatedAt                                          DateTime
+  updatedAt              DateTime                 @default(now())
   AIRecommendation                                   AIRecommendation[]
   AiInsight                                          AiInsight[]
   Approval                                           Approval[]
@@ -271,7 +271,7 @@ model Incident {
 }
 
 model IncidentCluster {
-  id             String       @id
+  id             String       @id @default(cuid())
   clusterCode    String       @unique
   type           IncidentType
   confidence     Float
@@ -279,11 +279,11 @@ model IncidentCluster {
   geoSpreadKm    Float
   latestReportAt DateTime
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime
+  updatedAt              DateTime                 @default(now())
 }
 
 model IncidentEvent {
-  id         String   @id
+  id         String   @id @default(cuid())
   incidentId String
   eventType  String
   data       String
@@ -294,7 +294,7 @@ model IncidentEvent {
 }
 
 model IncidentLink {
-  id                                             String   @id
+  id                                             String   @id @default(cuid())
   fromIncidentId                                 String
   toIncidentId                                   String
   relation                                       String
@@ -311,7 +311,7 @@ model IncidentLink {
 }
 
 model LearningEntry {
-  id             String    @id
+  id             String    @id @default(cuid())
   incidentId     String?
   category       String
   lesson         String
@@ -326,7 +326,7 @@ model LearningEntry {
 }
 
 model MarketplaceListing {
-  id            String       @id
+  id            String       @id @default(cuid())
   listingCode   String       @unique
   kind          String       @default("OFFER")
   agencyName    String
@@ -341,7 +341,7 @@ model MarketplaceListing {
   listedById    String?
   demo          Boolean      @default(false)
   createdAt     DateTime     @default(now())
-  updatedAt     DateTime
+  updatedAt              DateTime                 @default(now())
   Incident      Incident?    @relation(fields: [incidentId], references: [id])
   User          User?        @relation(fields: [listedById], references: [id])
 
@@ -349,7 +349,7 @@ model MarketplaceListing {
 }
 
 model MissingPerson {
-  id               String    @id
+  id               String    @id @default(cuid())
   fullName         String
   age              Int?
   gender           String?
@@ -370,7 +370,7 @@ model MissingPerson {
   source           String    @default("deterministic")
   demo             Boolean   @default(false)
   createdAt        DateTime  @default(now())
-  updatedAt        DateTime
+  updatedAt              DateTime                 @default(now())
   Incident         Incident? @relation(fields: [incidentId], references: [id])
   User             User      @relation(fields: [reportedById], references: [id])
 
@@ -378,7 +378,7 @@ model MissingPerson {
 }
 
 model Notification {
-  id        String           @id
+  id        String           @id @default(cuid())
   userId    String?
   message   String
   createdAt DateTime         @default(now())
@@ -392,7 +392,7 @@ model Notification {
 }
 
 model NotificationLog {
-  id               String    @id
+  id               String    @id @default(cuid())
   userId           String?
   incidentId       String?
   notificationType String
@@ -414,7 +414,7 @@ model NotificationLog {
 }
 
 model OperationalObservation {
-  id          String   @id
+  id          String   @id @default(cuid())
   incidentId  String
   createdById String
   kind        String
@@ -429,7 +429,7 @@ model OperationalObservation {
 }
 
 model OtpVerification {
-  id          String    @id
+  id          String    @id @default(cuid())
   identifier  String
   channel     String
   purpose     String
@@ -448,7 +448,7 @@ model OtpVerification {
 }
 
 model ReliefRequest {
-  id            String              @id
+  id            String              @id @default(cuid())
   requestedById String
   needType      ReliefNeedType
   quantity      String?
@@ -460,7 +460,7 @@ model ReliefRequest {
   status        ReliefRequestStatus @default(OPEN)
   incidentId    String?
   createdAt     DateTime            @default(now())
-  updatedAt     DateTime
+  updatedAt              DateTime                 @default(now())
   User          User                @relation(fields: [requestedById], references: [id], onDelete: Cascade)
 
   @@index([needType])
@@ -468,7 +468,7 @@ model ReliefRequest {
 }
 
 model Resource {
-  id                 String               @id
+  id                 String               @id @default(cuid())
   resourceCode       String               @unique
   name               String
   type               ResourceType
@@ -479,7 +479,7 @@ model Resource {
   eta                Int?
   lastUpdated        DateTime             @default(now())
   createdAt          DateTime             @default(now())
-  updatedAt          DateTime
+  updatedAt              DateTime                 @default(now())
   ResourceAssignment ResourceAssignment[]
 
   @@index([status])
@@ -487,7 +487,7 @@ model Resource {
 }
 
 model ResourceAssignment {
-  id           String    @id
+  id           String    @id @default(cuid())
   resourceId   String
   incidentId   String
   status       String    @default("ASSIGNED")
@@ -505,7 +505,7 @@ model ResourceAssignment {
 }
 
 model ResourceExpiry {
-  id             String       @id
+  id             String       @id @default(cuid())
   batchCode      String       @unique
   name           String
   type           ResourceType
@@ -519,13 +519,13 @@ model ResourceExpiry {
   source         String       @default("deterministic")
   demo           Boolean      @default(false)
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime
+  updatedAt              DateTime                 @default(now())
 
   @@index([expiresAt])
 }
 
 model SafeCheckIn {
-  id           String   @id
+  id           String   @id @default(cuid())
   userId       String
   isSafe       Boolean  @default(true)
   message      String?
@@ -540,7 +540,7 @@ model SafeCheckIn {
 }
 
 model SafeZone {
-  id                 String               @id
+  id                 String               @id @default(cuid())
   name               String
   zoneCode           String               @unique
   type               String
@@ -555,7 +555,7 @@ model SafeZone {
   source             String               @default("deterministic")
   demo               Boolean              @default(false)
   createdAt          DateTime             @default(now())
-  updatedAt          DateTime
+  updatedAt              DateTime                 @default(now())
   EvacuationCorridor EvacuationCorridor[]
   Incident           Incident?            @relation(fields: [incidentId], references: [id])
 
@@ -563,7 +563,7 @@ model SafeZone {
 }
 
 model SafetyContact {
-  id                 String    @id
+  id                 String    @id @default(cuid())
   ownerId            String
   name               String
   phone              String
@@ -580,7 +580,7 @@ model SafetyContact {
 }
 
 model ShelterFeedback {
-  id           String        @id
+  id           String        @id @default(cuid())
   incidentId   String?
   shelterName  String
   status       ShelterStatus
@@ -596,7 +596,7 @@ model ShelterFeedback {
 }
 
 model Shipment {
-  id           String    @id
+  id           String    @id @default(cuid())
   shipmentCode String    @unique
   description  String
   origin       String
@@ -609,14 +609,14 @@ model Shipment {
   source       String    @default("deterministic")
   demo         Boolean   @default(false)
   createdAt    DateTime  @default(now())
-  updatedAt    DateTime
+  updatedAt              DateTime                 @default(now())
   Incident     Incident? @relation(fields: [incidentId], references: [id])
 
   @@index([status])
 }
 
 model SimulationEvent {
-  id            String        @id
+  id            String        @id @default(cuid())
   runId         String
   simTimeMin    Int
   eventType     String
@@ -629,27 +629,27 @@ model SimulationEvent {
 }
 
 model SimulationRun {
-  id              String            @id
+  id              String            @id @default(cuid())
   scenario        String
   status          SimulationStatus  @default(RUNNING)
   config          String
   metrics         String?
   createdAt       DateTime          @default(now())
-  updatedAt       DateTime
+  updatedAt              DateTime                 @default(now())
   SimulationEvent SimulationEvent[]
 
   @@index([scenario])
 }
 
 model User {
-  id                     String                   @id
+  id                     String                   @id @default(cuid())
   email                  String                   @unique
   phone                  String?
   name                   String
   emailVerified          Boolean                  @default(false)
   phoneVerified          Boolean                  @default(false)
   createdAt              DateTime                 @default(now())
-  updatedAt              DateTime
+  updatedAt              DateTime                 @default(now())
   active                 Boolean                  @default(true)
   emailNotifications     Boolean                  @default(true)
   inAppNotifications     Boolean                  @default(true)
@@ -681,7 +681,7 @@ model User {
 }
 
 model VerifiedAlert {
-  id            String    @id
+  id            String    @id @default(cuid())
   title         String
   body          String
   severity      Severity  @default(MEDIUM)
@@ -698,7 +698,7 @@ model VerifiedAlert {
 }
 
 model VolunteerRegistration {
-  id           String          @id
+  id           String          @id @default(cuid())
   userId       String          @unique
   skills       String
   availability String
@@ -709,12 +709,12 @@ model VolunteerRegistration {
   reviewedById String?
   reviewNote   String?
   createdAt    DateTime        @default(now())
-  updatedAt    DateTime
+  updatedAt              DateTime                 @default(now())
   User         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model WhatIfRun {
-  id          String   @id
+  id          String   @id @default(cuid())
   name        String
   params      Json
   results     Json?
