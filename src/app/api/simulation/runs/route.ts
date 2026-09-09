@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   try {
     await requireAuth()
-    const runs = await db.simulationRun.findMany({ orderBy: { createdAt: 'desc' }, take: 30, include: { events: { orderBy: { simTimeMin: 'asc' } } } })
+    const runs = await db.simulationRun.findMany({ orderBy: { createdAt: 'desc' }, take: 30, include: { SimulationEvent: { orderBy: { simTimeMin: 'asc' } } } })
     return ok({ runs })
   } catch (e) {
     return handleAuthError(e)

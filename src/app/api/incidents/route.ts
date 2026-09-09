@@ -1,3 +1,6 @@
+// /api/incidents — citizen (or officer/admin) reports a new incident
+// Extended with citizen location tracking, movement status, destination,
+// impact zones, cascade risk, AI resource recommendations, and arrival flags.
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth, handleAuthError } from '@/lib/auth'
@@ -25,7 +28,20 @@ export async function POST(req: NextRequest) {
 
     const body = parseBody(await req.json())
     const { incidentType, description, location, latitude, longitude, imageMeta,
-            language, inputMethod, locationAccuracy, locationTimestamp } = body
+            language, inputMethod, locationAccuracy, locationTimestamp,
+            // Citizen location tracking (Feature 1)
+            citizenMovementStatus, citizenDestinationName,
+            citizenDestinationLatitude, citizenDestinationLongitude,
+            // Resource destination (Feature 2)
+            resourceDestinationName, resourceDestinationLatitude,
+            resourceDestinationLongitude, resourceDestinationType,
+            // Impact zones (Feature 16)
+            impactZone1Km, impactZone5Km, impactZone10Km,
+            // Cascade risk (Feature 17)
+            cascadeRisk,
+            // AI recommendations (Feature 14)
+            aiRecommendedResources, resourceRequirementEstimate,
+            } = body
 
     if (!ALLOWED.includes(incidentType)) return err('Invalid incidentType', 422)
     if (!description || typeof description !== 'string' || description.trim().length < 5) {

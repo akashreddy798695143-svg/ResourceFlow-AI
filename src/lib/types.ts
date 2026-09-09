@@ -18,7 +18,7 @@ export type ResourceType =
   | 'AMBULANCE' | 'RESCUE_TEAM' | 'FIRE_TEAM' | 'EMERGENCY_VEHICLE'
   | 'MEDICAL_SUPPLY' | 'FOOD_SUPPLY' | 'WATER_SUPPLY'
 
-export type ResourceStatus = 'AVAILABLE' | 'ASSIGNED' | 'EN_ROUTE' | 'ON_SCENE' | 'UNAVAILABLE'
+export type ResourceStatus = 'AVAILABLE' | 'ASSIGNED' | 'EN_ROUTE' | 'ON_SCENE' | 'UNAVAILABLE' | 'ARRIVED' | 'DISPATCHED'
 
 export type NotificationType =
   | 'INFO' | 'WARNING' | 'CRITICAL' | 'APPROVAL_REQUIRED' | 'ESCALATION' | 'RESOLUTION'
@@ -81,7 +81,35 @@ export interface Incident {
   escalationLevel: number
   resolutionEmailSent?: boolean
   resolutionEmailSentAt?: string | null
-  reportedById: string
+  // Citizen location tracking (Feature 1)
+  citizenLatitude?: number | null
+  citizenLongitude?: number | null
+  citizenLocationTimestamp?: string | null
+  citizenDestinationLatitude?: number | null
+  citizenDestinationLongitude?: number | null
+  citizenDestinationName?: string | null
+  citizenMovementStatus?: string | null
+  // Resource destination (Feature 2-5)
+  resourceDestinationLatitude?: number | null
+  resourceDestinationLongitude?: number | null
+  resourceDestinationName?: string | null
+  resourceDestinationType?: string | null
+  // Impact zones (Feature 16)
+  impactZone1Km?: string | null
+  impactZone5Km?: string | null
+  impactZone10Km?: string | null
+  // Cascade risk (Feature 17)
+  cascadeRisk?: string | null
+  // AI recommendations (Feature 14)
+  aiRecommendedResources?: string | null
+  resourceRequirementEstimate?: string | null
+  // Arrival tracking (Feature 5)
+  autoArrivalVerified?: boolean
+  manualArrivalConfirmed?: boolean
+  arrivalVerifiedById?: string | null
+  arrivalVerifiedAt?: string | null
+  // Relations
+  emergencyServices?: EmergencyServicePlace[]
   reportedBy?: { name: string }
   events?: IncidentEvent[]
   approvals?: Approval[]
@@ -241,4 +269,75 @@ export interface DashboardEvent {
   resourceId?: string
   data?: any
   timestamp: string
+}
+
+
+export interface SafePlace {
+  id: string
+  name: string
+  type: string
+  latitude: number
+  longitude: number
+  address?: string | null
+  phone?: string | null
+  availability?: string | null
+  distanceKm?: number | null
+  estimatedTime?: number | null
+}
+
+export interface EmergencyServicePlace {
+  id: string
+  name: string
+  type: string
+  latitude: number
+  longitude: number
+  address?: string | null
+  phone?: string | null
+  availability?: string | null
+  distanceKm?: number | null
+}
+
+export interface VolunteerRegistration {
+  id: string
+  userId: string
+  name?: string
+  email?: string
+  phone?: string | null
+  skills: string
+  availability: string
+  areas?: string | null
+  hasTransport: boolean
+  status: 'PENDING' | 'APPROVED' | 'ACTIVE' | 'INACTIVE' | 'REJECTED'
+  verifiedSafe: boolean
+  reviewNote?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  locationTimestamp?: string | null
+  locationSharing: boolean
+  createdAt: string
+  updatedAt?: string
+  assignments?: VolunteerAssignment[]
+}
+
+export interface VolunteerAssignment {
+  id: string
+  volunteerId: string
+  incidentId: string
+  incidentCode?: string
+  incidentType?: string
+  incidentStatus?: string
+  status: string
+  recommendedBy?: string
+  approvedById?: string
+  note?: string | null
+  createdAt: string
+}
+
+export interface VolunteerLocation {
+  latitude: number | null
+  longitude: number | null
+  locationTimestamp: string | null
+  locationSharing: boolean
+  availability: string
+  status: string
 }

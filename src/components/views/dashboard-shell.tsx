@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import {
   ShieldAlert, LayoutDashboard, Map, Package, CheckSquare, FlaskConical,
   BarChart3, ScrollText, Settings, LogOut, Bell, Plus, Search, RadioTower,
-  AlertTriangle, Menu, X, Activity, ChevronRight, Brain, LifeBuoy, Users,
+  AlertTriangle, Menu, X, Activity, ChevronRight, Brain, LifeBuoy, Users, HandHeart,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -42,12 +42,15 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Analytics', path: '/analytics', icon: BarChart3, roles: ['DISASTER_OFFICER', 'ADMIN'] },
   { label: 'Simulation', path: '/simulation', icon: FlaskConical, roles: ['DISASTER_OFFICER', 'ADMIN'] },
   { label: 'Audit Logs', path: '/audit', icon: ScrollText, roles: ['ADMIN'] },
+  { label: 'Volunteer Mgmt', path: '/volunteer-management', icon: HandHeart, roles: ['DISASTER_OFFICER', 'ADMIN'] },
+  { label: 'Volunteer Map', path: '/volunteer-map', icon: Map, roles: ['DISASTER_OFFICER', 'ADMIN'] },
   { label: 'Settings', path: '/settings', icon: Settings, roles: ['ADMIN', 'DISASTER_OFFICER', 'RESPONDER'] },
   // Citizen
   { label: 'Safety Center', path: '/safety-center', icon: LifeBuoy, roles: ['CITIZEN'] },
   { label: 'My Reports', path: '/citizen-dashboard', icon: LayoutDashboard, roles: ['CITIZEN'] },
   { label: 'Report Emergency', path: '/report-incident', icon: Plus, roles: ['CITIZEN', 'DISASTER_OFFICER'] },
   { label: 'Track Incident', path: '/track-incident', icon: Search, roles: ['CITIZEN', 'DISASTER_OFFICER'] },
+  { label: 'Volunteer', path: '/volunteer-register', icon: HandHeart, roles: ['CITIZEN'] },
 ]
 
 export function DashboardShell({ children }: { children: ReactNode }) {

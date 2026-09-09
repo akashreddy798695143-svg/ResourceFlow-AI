@@ -46,6 +46,8 @@ const RESOURCE_STATUS_STYLES: Record<ResourceStatus, string> = {
   ASSIGNED: 'bg-primary/20 text-primary border-primary/40',
   EN_ROUTE: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
   ON_SCENE: 'bg-primary/20 text-primary border-primary/40',
+  DISPATCHED: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  ARRIVED: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
   UNAVAILABLE: 'bg-red-500/15 text-red-400 border-red-500/30',
 }
 

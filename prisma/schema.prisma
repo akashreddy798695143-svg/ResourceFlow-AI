@@ -31,7 +31,7 @@ model AiInsight {
   status      String    @default("ACTIVE")
   createdById String?
   createdAt   DateTime  @default(now())
-  updatedAt              DateTime                 @default(now())
+  updatedAt   DateTime  @default(now())
   User        User?     @relation(fields: [createdById], references: [id])
   Incident    Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
@@ -112,7 +112,7 @@ model EmailNotification {
   sentAt          DateTime?
   errorMessage    String?
   createdAt       DateTime    @default(now())
-  updatedAt              DateTime                 @default(now())
+  updatedAt       DateTime    @default(now())
   Incident        Incident    @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
   @@index([incidentId])
@@ -136,7 +136,7 @@ model EvacuationCorridor {
   source          String    @default("deterministic")
   demo            Boolean   @default(false)
   createdAt       DateTime  @default(now())
-  updatedAt              DateTime                 @default(now())
+  updatedAt       DateTime  @default(now())
   Incident        Incident? @relation(fields: [incidentId], references: [id])
   SafeZone        SafeZone? @relation(fields: [toSafeZoneId], references: [id])
 
@@ -172,7 +172,7 @@ model HazardReport {
   verifiedAt    DateTime?
   language      String?
   createdAt     DateTime     @default(now())
-  updatedAt              DateTime                 @default(now())
+  updatedAt     DateTime     @default(now())
   User          User         @relation(fields: [reportedById], references: [id], onDelete: Cascade)
 
   @@index([clusterKey])
@@ -194,7 +194,7 @@ model Hospital {
   source        String    @default("demo")
   demo          Boolean   @default(true)
   createdAt     DateTime  @default(now())
-  updatedAt              DateTime                 @default(now())
+  updatedAt     DateTime  @default(now())
   Incident      Incident? @relation(fields: [incidentId], references: [id])
 
   @@index([status])
@@ -243,9 +243,45 @@ model Incident {
   escalationLevel                                    Int                      @default(0)
   resolutionEmailSent                                Boolean                  @default(false)
   resolutionEmailSentAt                              DateTime?
+  // NEW: Citizen emergency location tracking (Feature 1)
+  citizenLatitude                                    Float?
+  citizenLongitude                                   Float?
+  citizenLocationTimestamp                           DateTime?
+  citizenDestinationLatitude                         Float?
+  citizenDestinationLongitude                        Float?
+  citizenDestinationName                             String?
+  citizenMovementStatus                              String?                  @default("STATIC")
+  // NEW: Resource destination (Feature 2-5)
+  resourceDestinationLatitude                        Float?
+  resourceDestinationLongitude                       Float?
+  resourceDestinationName                            String?
+  resourceDestinationType                            String?
+  // NEW: Impact zones (Feature 16)
+  impactZone1Km                                      String?
+  impactZone5Km                                      String?
+  impactZone10Km                                     String?
+  // NEW: Cascade risk (Feature 17)
+  cascadeRisk                                        String?
+  // NEW: Smart resource matching (Feature 14)
+  aiRecommendedResources                             String?
+  resourceRequirementEstimate                        String?
+  // NEW: Automatic arrival tracking (Feature 5)
+  autoArrivalVerified                                Boolean                  @default(false)
+  manualArrivalConfirmed                             Boolean                  @default(false)
+  arrivalVerifiedById                                String?
+  arrivalVerifiedAt                                  DateTime?
+  // NEW Relations for new models
+  EmergencyServices                                  EmergencyService[]
+  SafePlaces                                         SafePlace[]
+  // Existing relations
+  ResourceAssignment                                 ResourceAssignment[]
+  // New relations for resource tracking
+  Events                                             ResourceTrackingEvent[]
+  Destinations                                       ResourceDestination[]
+  // The reporter (FK) — always from session, never from frontend
   reportedById                                       String
   createdAt                                          DateTime                 @default(now())
-  updatedAt              DateTime                 @default(now())
+  updatedAt                                          DateTime                 @default(now())
   AIRecommendation                                   AIRecommendation[]
   AiInsight                                          AiInsight[]
   Approval                                           Approval[]
@@ -261,11 +297,11 @@ model Incident {
   MarketplaceListing                                 MarketplaceListing[]
   MissingPerson                                      MissingPerson[]
   OperationalObservation                             OperationalObservation[]
-  ResourceAssignment                                 ResourceAssignment[]
-  SafeZone                                           SafeZone[]
-  Shipment                                           Shipment[]
+  safeZones                                          SafeZone[]
+  shipments                                          Shipment[]
+  VolunteerAssignment                                 VolunteerAssignment[]
 
-  @@index([clusterId])
+  // The reporter (FK) — always from session, never from frontend
   @@index([status])
   @@index([type])
 }
@@ -279,7 +315,7 @@ model IncidentCluster {
   geoSpreadKm    Float
   latestReportAt DateTime
   createdAt      DateTime     @default(now())
-  updatedAt              DateTime                 @default(now())
+  updatedAt      DateTime     @default(now())
 }
 
 model IncidentEvent {
@@ -341,7 +377,7 @@ model MarketplaceListing {
   listedById    String?
   demo          Boolean      @default(false)
   createdAt     DateTime     @default(now())
-  updatedAt              DateTime                 @default(now())
+  updatedAt     DateTime     @default(now())
   Incident      Incident?    @relation(fields: [incidentId], references: [id])
   User          User?        @relation(fields: [listedById], references: [id])
 
@@ -370,7 +406,7 @@ model MissingPerson {
   source           String    @default("deterministic")
   demo             Boolean   @default(false)
   createdAt        DateTime  @default(now())
-  updatedAt              DateTime                 @default(now())
+  updatedAt        DateTime  @default(now())
   Incident         Incident? @relation(fields: [incidentId], references: [id])
   User             User      @relation(fields: [reportedById], references: [id])
 
@@ -460,27 +496,131 @@ model ReliefRequest {
   status        ReliefRequestStatus @default(OPEN)
   incidentId    String?
   createdAt     DateTime            @default(now())
-  updatedAt              DateTime                 @default(now())
+  updatedAt     DateTime            @default(now())
   User          User                @relation(fields: [requestedById], references: [id], onDelete: Cascade)
 
   @@index([needType])
   @@index([status])
 }
 
+// Emergency Services (Feature 9) - Nearby hospitals, fire stations, police, etc.
+model EmergencyService {
+  id           String    @id @default(cuid())
+  name         String
+  type         String // HOSPITAL, FIRE_STATION, POLICE, AMBULANCE_SERVICE, RELIEF_CENTER, SHELTER, SAFE_ZONE
+  latitude     Float
+  longitude    Float
+  address      String?
+  phone        String?
+  availability String    @default("OPEN") // OPEN, BUSY, CLOSED, LIMITED
+  services     String? // JSON: ["ICU", "Trauma", "24/7"]
+  distanceKm   Float? // Calculated from incident
+  incidentId   String?
+  source       String    @default("places_api")
+  demo         Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now())
+  Incident     Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([type])
+  @@index([incidentId])
+}
+
+// Safe Places for citizens (Feature 6, 7) - Hospitals, shelters, relief centers, etc.
+model SafePlace {
+  id            String    @id @default(cuid())
+  name          String
+  type          String // EMERGENCY_SHELTER, HOSPITAL, EMERGENCY_MEDICAL_CENTER, EMERGENCY_SERVICE, FIRE_RESCUE, RELIEF_CENTER, SAFE_ZONE
+  latitude      Float
+  longitude     Float
+  address       String?
+  phone         String?
+  availability  String    @default("OPEN") // OPEN, BUSY, FULL, CLOSED
+  amenities     String? // JSON: ["food", "water", "medical", " bedding"]
+  distanceKm    Float? // Calculated from citizen location
+  estimatedTime Int? // Estimated travel time in minutes
+  incidentId    String?
+  citizenId     String? // For personalized safe place recommendations
+  source        String    @default("places_api")
+  demo          Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now())
+  Incident      Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  User          User?     @relation(fields: [citizenId], references: [id], onDelete: Cascade)
+
+  @@index([type])
+  @@index([incidentId])
+  @@index([citizenId])
+}
+
+// Resource status tracking timeline (Feature 12)
+model ResourceTrackingEvent {
+  id           String    @id @default(cuid())
+  resourceId   String
+  assignmentId String?
+  status       String // REQUESTED, APPROVED, ASSIGNED, DISPATCHED, EN_ROUTE, ARRIVED, COMPLETED
+  latitude     Float?
+  longitude    Float?
+  locationName String?
+  timestamp    DateTime  @default(now())
+  details      String? // JSON: { distanceRemaining, eta, speed, heading }
+  recordedById String?
+  reason       String?
+  Resource     Resource  @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  User         User?     @relation(fields: [recordedById], references: [id])
+  incident     Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  incidentId   String?
+
+  @@index([resourceId])
+  @@index([assignmentId])
+  @@index([status])
+  @@index([timestamp])
+}
+
+// Resource destination tracking (Feature 2-5)
+model ResourceDestination {
+  id                String    @id @default(cuid())
+  resourceId        String
+  incidentId        String
+  destinationType   String    @default("INCIDENT") // INCIDENT, HOSPITAL, SAFE_ZONE, SHELTER, RELIEF_CENTER
+  name              String
+  latitude          Float
+  longitude         Float
+  address           String?
+  status            String    @default("EN_ROUTE") // EN_ROUTE, ARRIVED, CANCELLED
+  distanceRemaining Float? // Remaining distance in km
+  etaMinutes        Int? // Estimated time to arrival in minutes
+  lastUpdated       DateTime  @default(now())
+  arrivedAt         DateTime?
+  confirmedById     String? // Officer who confirmed arrival
+  confirmedAt       DateTime?
+  autoVerified      Boolean   @default(false) // Auto-verified by geofence
+  Resource          Resource  @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  Incident          Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  user              User?     @relation(fields: [userId], references: [id])
+  userId            String?
+
+  @@index([resourceId])
+  @@index([incidentId])
+  @@index([status])
+}
+
 model Resource {
-  id                 String               @id @default(cuid())
-  resourceCode       String               @unique
-  name               String
-  type               ResourceType
-  latitude           Float
-  longitude          Float
-  capacity           Int
-  status             ResourceStatus       @default(AVAILABLE)
-  eta                Int?
-  lastUpdated        DateTime             @default(now())
-  createdAt          DateTime             @default(now())
-  updatedAt              DateTime                 @default(now())
-  ResourceAssignment ResourceAssignment[]
+  id                     String                  @id @default(cuid())
+  resourceCode           String                  @unique
+  name                   String
+  type                   ResourceType
+  latitude               Float
+  longitude              Float
+  capacity               Int
+  status                 ResourceStatus          @default(AVAILABLE)
+  eta                    Int?
+  lastUpdated            DateTime                @default(now())
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @default(now())
+  ResourceAssignment     ResourceAssignment[]
+  resourceTrackingEvents ResourceTrackingEvent[]
+  resourceDestinations   ResourceDestination[]
 
   @@index([status])
   @@index([type])
@@ -519,7 +659,7 @@ model ResourceExpiry {
   source         String       @default("deterministic")
   demo           Boolean      @default(false)
   createdAt      DateTime     @default(now())
-  updatedAt              DateTime                 @default(now())
+  updatedAt      DateTime     @default(now())
 
   @@index([expiresAt])
 }
@@ -555,7 +695,7 @@ model SafeZone {
   source             String               @default("deterministic")
   demo               Boolean              @default(false)
   createdAt          DateTime             @default(now())
-  updatedAt              DateTime                 @default(now())
+  updatedAt          DateTime             @default(now())
   EvacuationCorridor EvacuationCorridor[]
   Incident           Incident?            @relation(fields: [incidentId], references: [id])
 
@@ -609,7 +749,7 @@ model Shipment {
   source       String    @default("deterministic")
   demo         Boolean   @default(false)
   createdAt    DateTime  @default(now())
-  updatedAt              DateTime                 @default(now())
+  updatedAt    DateTime  @default(now())
   Incident     Incident? @relation(fields: [incidentId], references: [id])
 
   @@index([status])
@@ -635,7 +775,7 @@ model SimulationRun {
   config          String
   metrics         String?
   createdAt       DateTime          @default(now())
-  updatedAt              DateTime                 @default(now())
+  updatedAt       DateTime          @default(now())
   SimulationEvent SimulationEvent[]
 
   @@index([scenario])
@@ -670,8 +810,11 @@ model User {
   OtpVerification        OtpVerification[]
   ReliefRequest          ReliefRequest[]
   ResourceAssignment     ResourceAssignment[]
+  ResourceTrackingEvent  ResourceTrackingEvent[]
+  ResourceDestination    ResourceDestination[]
   SafeCheckIn            SafeCheckIn[]
   SafetyContact          SafetyContact[]
+  SafePlace              SafePlace[]
   ShelterFeedback        ShelterFeedback[]
   VerifiedAlert          VerifiedAlert[]
   VolunteerRegistration  VolunteerRegistration?
@@ -698,19 +841,60 @@ model VerifiedAlert {
 }
 
 model VolunteerRegistration {
-  id           String          @id @default(cuid())
-  userId       String          @unique
-  skills       String
-  availability String
-  areas        String?
-  hasTransport Boolean         @default(false)
-  status       VolunteerStatus @default(PENDING)
-  verifiedSafe Boolean         @default(false)
-  reviewedById String?
-  reviewNote   String?
-  createdAt    DateTime        @default(now())
-  updatedAt              DateTime                 @default(now())
-  User         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String          @id @default(cuid())
+  userId            String          @unique
+  skills            String
+  availability      String
+  areas             String?
+  hasTransport      Boolean         @default(false)
+  status            VolunteerStatus @default(PENDING)
+  verifiedSafe      Boolean         @default(false)
+  reviewedById      String?
+  reviewNote        String?
+  // Location fields (only stored with explicit permission)
+  latitude          Float?
+  longitude         Float?
+  locationTimestamp DateTime?
+  locationSharing   Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @default(now())
+  User              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments       VolunteerAssignment[]
+  locationUpdates   VolunteerLocationUpdate[]
+
+  @@index([status])
+  @@index([availability])
+}
+
+model VolunteerAssignment {
+  id           String    @id @default(cuid())
+  volunteerId  String
+  incidentId   String
+  status       String    @default("RECOMMENDED") // RECOMMENDED, APPROVED, REJECTED, COMPLETED
+  recommendedBy String?   // "AI" or officer userId
+  approvedById String?
+  approvedAt   DateTime?
+  note         String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now())
+  volunteer    VolunteerRegistration @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+  incident     Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([volunteerId])
+  @@index([incidentId])
+  @@index([status])
+}
+
+model VolunteerLocationUpdate {
+  id          String   @id @default(cuid())
+  volunteerId String
+  latitude    Float
+  longitude   Float
+  accuracy    Float?
+  timestamp   DateTime @default(now())
+  volunteer   VolunteerRegistration @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+
+  @@index([volunteerId, timestamp])
 }
 
 model WhatIfRun {
@@ -825,6 +1009,7 @@ enum ResourceStatus {
   ASSIGNED
   EN_ROUTE
   ON_SCENE
+  ARRIVED
   UNAVAILABLE
 }
 

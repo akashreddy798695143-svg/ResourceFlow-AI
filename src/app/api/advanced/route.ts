@@ -62,7 +62,7 @@ export async function GET(req: Request) {
             id: m.id, fullName: m.fullName, age: m.age, gender: m.gender, description: m.description,
             lastSeenLocation: m.lastSeenLocation, latitude: m.latitude, longitude: m.longitude,
             medicalNeeds: m.medicalNeeds, childOrElder: m.childOrElder, priorityScore: m.priorityScore,
-            status: m.status, incidentCode: m.incident?.incidentCode ?? null, createdAt: m.createdAt,
+            status: m.status, incidentCode: m.Incident?.incidentCode ?? null, createdAt: m.createdAt,
             contact: officer ? { name: m.contactName, phone: m.contactPhone } : { masked: true },
           })),
         })
@@ -84,7 +84,7 @@ export async function GET(req: Request) {
         return NextResponse.json({ entries: await listLearningEntries() })
       case 'insights': {
         if (!roleAllows('advanced:read', user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-        const rows = await db.aiInsight.findMany({ where: incidentId ? { incidentId } : {}, orderBy: { createdAt: 'desc' }, take: 60, include: { incident: { select: { incidentCode: true } } } })
+        const rows = await db.aiInsight.findMany({ where: incidentId ? { incidentId } : {}, orderBy: { createdAt: 'desc' }, take: 60, include: { Incident: { select: { incidentCode: true } } } })
         return NextResponse.json({ insights: rows })
       }
       default:

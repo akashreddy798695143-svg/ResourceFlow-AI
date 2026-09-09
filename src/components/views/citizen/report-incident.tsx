@@ -74,9 +74,12 @@ export function ReportIncidentView() {
   const [mapPicker, setMapPicker] = useState(false)
   const [manualLat, setManualLat] = useState('')
   const [manualLng, setManualLng] = useState('')
-  // Optional photo upload (image metadata only — the backend validates type + size)
+  // Optional photo upload
   const [imageMeta, setImageMeta] = useState<{ filename?: string; size?: number; contentType?: string } | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
   const [isOnline, setIsOnline] = useState(true)
   const [queuedReports, setQueuedReports] = useState<QueuedReport[]>([])
 
@@ -259,6 +262,8 @@ export function ReportIncidentView() {
       return
     }
     setImageMeta({ filename: file.name, size: file.size, contentType: file.type })
+    setImageFile(file)
+    setPhotoError(null)
     const reader = new FileReader()
     reader.onload = () => setImagePreview(reader.result as string)
     reader.readAsDataURL(file)
@@ -267,6 +272,8 @@ export function ReportIncidentView() {
   const clearImage = () => {
     setImageMeta(null)
     setImagePreview(null)
+    setImageFile(null)
+    setPhotoError(null)
   }
 
   const submit = async (e: React.FormEvent) => {
@@ -291,6 +298,19 @@ export function ReportIncidentView() {
     try {
       // The backend derives identity from the authenticated session.
       const res = await apiPost<{ incidentCode: string; id: string; citizen: any; location: any }>('/api/incidents', payload)
+      // Upload photo if provided (optional — does not block submission)
+      if (imageFile) {
+        setPhotoUploading(true)
+        try {
+          const formData = new FormData()
+          formData.append('photo', imageFile)
+          await fetch(`/api/incidents/${res.id}/photo`, { method: 'POST', body: formData, credentials: 'include' })
+        } catch (photoErr) {
+          setPhotoError('Photo upload failed — incident was still created')
+        } finally {
+          setPhotoUploading(false)
+        }
+      }
       toast.success(`Report received: ${res.incidentCode}`, {
         description: 'AI analysis started. Track status with your incident code.',
       })
@@ -498,6 +518,9 @@ export function ReportIncidentView() {
               </div>
               {imagePreview && (
                 <img src={imagePreview} alt="preview" className="mt-2 max-h-40 rounded-md border border-border" />
+              )}
+              {photoError && (
+                <p className="text-xs text-amber-500 mt-1">⚠️ {photoError}</p>
               )}
             </div>
 

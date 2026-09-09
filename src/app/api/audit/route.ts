@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
       where,
       orderBy: { timestamp: 'desc' },
       take: limit,
-      include: { user: { select: { name: true, email: true } } },
+      include: { User: { select: { name: true, email: true } } },
     })
     return ok({ logs })
   } catch (e) {

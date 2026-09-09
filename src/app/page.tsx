@@ -23,6 +23,9 @@ import { AdvancedCenterView } from '@/components/views/advanced/advanced-center'
 import { AnalyticsView } from '@/components/views/analytics'
 import { AuditLogsView } from '@/components/views/audit-logs'
 import { SettingsView } from '@/components/views/settings'
+import { VolunteerRegisterView } from '@/components/views/citizen/volunteer-register'
+import { VolunteerManagementView } from '@/components/views/officer/volunteer-management'
+import { VolunteerMapView } from '@/components/views/officer/volunteer-map'
 
 
 function Routed() {
@@ -93,6 +96,7 @@ function Routed() {
     if (route.startsWith('safety-center')) return <DashboardShell><CitizenSafetyCenterView /></DashboardShell>
     if (route.startsWith('report-incident')) return <DashboardShell><ReportIncidentView /></DashboardShell>
     if (route.startsWith('track-incident')) return <DashboardShell><TrackIncidentView /></DashboardShell>
+    if (route.startsWith('volunteer-register')) return <DashboardShell><VolunteerRegisterView /></DashboardShell>
     return <DashboardShell><CitizenDashboardView /></DashboardShell>
   }
 
@@ -118,6 +122,9 @@ function Routed() {
   if (route.startsWith('report-incident')) return <DashboardShell><ReportIncidentView /></DashboardShell>
   if (route.startsWith('track-incident')) return <DashboardShell><TrackIncidentView /></DashboardShell>
   if (route.startsWith('citizen-dashboard')) return <DashboardShell><CitizenDashboardView /></DashboardShell>
+  if (route.startsWith('volunteer-register')) return <DashboardShell><VolunteerRegisterView /></DashboardShell>
+  if (route.startsWith('volunteer-map')) return <DashboardShell><VolunteerMapView /></DashboardShell>
+  if (route.startsWith('volunteer-management')) return <DashboardShell><VolunteerManagementView /></DashboardShell>
 
   // Fallback for officer/admin: command center (effect will redirect empty path)
   return <DashboardShell><CommandCenterView /></DashboardShell>

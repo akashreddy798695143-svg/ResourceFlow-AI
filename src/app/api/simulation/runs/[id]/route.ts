@@ -9,7 +9,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     const { id } = await ctx.params
     const run = await db.simulationRun.findUnique({
       where: { id },
-      include: { events: { orderBy: { simTimeMin: 'asc' } } },
+      include: { SimulationEvent: { orderBy: { simTimeMin: 'asc' } } },
     })
     if (!run) return err('Simulation run not found', 404)
     return ok({
@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
         ...run,
         config: JSON.parse(run.config),
         metrics: run.metrics ? JSON.parse(run.metrics) : null,
-        events: run.events.map((e) => ({ ...e, data: JSON.parse(e.data) })),
+        SimulationEvent: run.SimulationEvent.map((e) => ({ ...e, data: JSON.parse(e.data) })),
       },
     })
   } catch (e) {

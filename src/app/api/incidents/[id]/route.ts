@@ -12,11 +12,11 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     const incident = await db.incident.findUnique({
       where: { id },
       include: {
-        events: { orderBy: { createdAt: 'asc' } },
-        approvals: { orderBy: { createdAt: 'desc' } },
-        assignments: { orderBy: { assignedAt: 'asc' } },
-        recommendations: { orderBy: { createdAt: 'desc' } },
-        report: true,
+        IncidentEvent: { orderBy: { createdAt: 'asc' } },
+        Approval: { orderBy: { createdAt: 'desc' } },
+        ResourceAssignment: { orderBy: { assignedAt: 'asc' } },
+        AIRecommendation: { orderBy: { createdAt: 'desc' } },
+        GeneratedReport: true,
         User: { select: { name: true } },
       },
     })
@@ -43,7 +43,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
           startedAt: incident.startedAt,
           arrivedAt: incident.arrivedAt,
           resolvedAt: incident.resolvedAt,
-          events: incident.events,
+          IncidentEvent: incident.IncidentEvent,
           resolutionEmailSent: incident.resolutionEmailSent,
         },
       })

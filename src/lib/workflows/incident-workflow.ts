@@ -718,9 +718,9 @@ export async function generateIncidentReport(incidentId: string) {
   const incident = await db.incident.findUnique({
     where: { id: incidentId },
     include: {
-      events: { orderBy: { createdAt: 'asc' } },
-      assignments: { include: { resource: true } },
-      approvals: { include: { reviewer: { select: { name: true, email: true } } } },
+      IncidentEvent: { orderBy: { createdAt: 'asc' } },
+      ResourceAssignment: { include: { Resource: true } },
+      Approval: { include: { User: { select: { name: true, email: true } } } },
     },
   })
   if (!incident) return
@@ -746,27 +746,27 @@ export async function generateIncidentReport(incidentId: string) {
     riskScore: incident.riskScore,
     riskLevel: incident.riskLevel,
     summary: `${incident.type.replace(/_/g, ' ')} incident resolved in ${totalTimeMin} minutes with response team deployment.`,
-    timeline: incident.events.map((e) => {
+    timeline: incident.IncidentEvent.map((e) => {
       let d: any = {}
       try { d = JSON.parse(e.data) } catch {}
       return { t: e.createdAt, type: e.eventType, label: d?.label || e.eventType }
     }),
-    resourcesDeployed: incident.assignments.map((a) => ({
-      resourceCode: a.resource.resourceCode,
-      name: a.resource.name,
-      type: a.resource.type,
+    resourcesDeployed: incident.ResourceAssignment.map((a) => ({
+      resourceCode: a.Resource.resourceCode,
+      name: a.Resource.name,
+      type: a.Resource.type,
       status: a.status,
       assignedAt: a.assignedAt,
     })),
-    approvals: incident.approvals.map((ap) => ({
+    approvals: incident.Approval.map((ap) => ({
       decision: ap.decision,
-      reviewedBy: ap.reviewer?.name || 'Authorized Officer',
+      reviewedBy: ap.User?.name || 'Authorized Officer',
       reviewedAt: ap.reviewedAt,
       reason: ap.reason,
     })),
     responseTimeMin,
     resolutionTimeMin: totalTimeMin,
-    delays: incident.events.filter((e) => e.eventType === 'RESPONSE_DELAYED').length,
+    delays: incident.IncidentEvent.filter((e) => e.eventType === 'RESPONSE_DELAYED').length,
     escalationLevel: incident.escalationLevel,
     notificationsDispatched: notifCount,
     finalOutcome: 'Scene stabilized — incident resolved successfully',

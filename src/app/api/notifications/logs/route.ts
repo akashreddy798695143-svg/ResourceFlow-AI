@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       where,
       orderBy: { createdAt: 'desc' },
       take: limit,
-      include: { user: { select: { name: true, role: true } } },
+      include: { User: { select: { name: true, role: true } } },
     })
 
     // Mask recipients — citizens/responders see their own address unmasked; admins see full; officers see masked

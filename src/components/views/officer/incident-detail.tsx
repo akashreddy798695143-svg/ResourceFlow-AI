@@ -19,6 +19,7 @@ import {
   IncidentTypeBadge, RiskBadge, StatusBadge, ResourceStatusBadge, RESOURCE_TYPE_LABELS,
 } from '@/components/shared/badges'
 import { CommandMap } from '@/components/shared/command-map'
+import { ResourceTrackingCard } from '@/components/shared/resource-tracking-card'
 import { WeatherCard } from '@/components/shared/weather-card'
 import type { Incident, Resource, Approval, DashboardEvent, IncidentStatus, RiskLevel, ResourceStatus } from '@/lib/types'
 
@@ -52,6 +53,24 @@ export function IncidentDetailView() {
   const [escalateReason, setEscalateReason] = useState('')
   const [retryingId, setRetryingId] = useState<string | null>(null)
   const [whatsappSending, setWhatsappSending] = useState(false)
+  const [photos, setPhotos] = useState<any[]>([])
+  const [photosLoading, setPhotosLoading] = useState(false)
+
+  const loadPhotos = useCallback(async () => {
+    if (!id) return
+    // Only officer/admin can see photos (backend enforces RBAC)
+    if (user?.role === 'CITIZEN' || user?.role === 'RESPONDER') return
+    setPhotosLoading(true)
+    try {
+      const res = await apiGet<{ photos: any[] }>(`/api/incidents/${id}/photo`)
+      setPhotos(res.photos || [])
+    } catch {
+      // Photo access denied or not available
+      setPhotos([])
+    } finally {
+      setPhotosLoading(false)
+    }
+  }, [id, user?.role])
 
   const load = useCallback(async () => {
     if (!id) return
@@ -78,10 +97,10 @@ export function IncidentDetailView() {
     }
   }, [id])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load(); loadPhotos() }, [load, loadPhotos])
   useRealtimeEvents(useCallback((e: DashboardEvent) => {
-    if (e.incidentId === id || e.type.startsWith('EMAIL') || e.type === 'INCIDENT_RESOLVED') load()
-  }, [id, load]))
+    if (e.incidentId === id || e.type.startsWith('EMAIL') || e.type === 'INCIDENT_RESOLVED' || e.type === 'PHOTO_UPLOADED') { load(); loadPhotos() }
+  }, [id, load, loadPhotos]))
 
   if (loading) return <div className="flex items-center justify-center py-12 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading incident…</div>
   if (!incident) return <div className="p-6 text-center text-muted-foreground">Incident not found.</div>
@@ -112,6 +131,19 @@ export function IncidentDetailView() {
       await apiPost(`/api/approvals/${pendingApproval.id}/${decision}`, { reason: approvalReason || `${decision}d by ${user?.name}` })
       toast.success(`Assignment ${decision}d`)
       setApprovalReason('')
+      load()
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const confirmArrival = async (resourceId: string) => {
+    setActionLoading(true)
+    try {
+      await apiPost(`/api/incident/${id}/arrival-confirmation`, { resourceId, mode: 'manual' })
+      toast.success('Arrival confirmed')
       load()
     } catch (e: any) {
       toast.error(e.message)
@@ -247,7 +279,7 @@ export function IncidentDetailView() {
               <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3 space-y-1">
                 <p className="text-[10px] font-semibold uppercase text-muted-foreground">Citizen Contact</p>
                 <div className="flex flex-wrap items-center gap-3 text-xs">
-                  <span className="flex items-center gap-1.5"><User className="h-3 w-3 text-muted-foreground" /> {incident.citizenName || incident.User?.name || '—'}</span>
+                  <span className="flex items-center gap-1.5"><User className="h-3 w-3 text-muted-foreground" /> {incident.citizenName || incident.reportedBy?.name || '—'}</span>
                   {incident.citizenEmail && (
                     <span className="flex items-center gap-1.5 text-muted-foreground"><Mail className="h-3 w-3" /> {incident.citizenEmail}</span>
                   )}
@@ -261,6 +293,38 @@ export function IncidentDetailView() {
             )}
           </CardContent>
         </Card>
+
+        {/* Citizen Evidence / Uploaded Photo — officer/admin only */}
+        {canApprove && (
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2">📷 Citizen Evidence / Uploaded Photo</CardTitle></CardHeader>
+            <CardContent>
+              {photosLoading ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…</div>
+              ) : photos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No photo provided by citizen.</p>
+              ) : (
+                <div className="space-y-3">
+                  {photos.map((photo, idx) => (
+                    <div key={idx} className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{photo.filename || `Photo ${idx + 1}`}</span>
+                        {photo.contentType && <Badge variant="outline" className="text-[9px]">{photo.contentType}</Badge>}
+                        {photo.uploadedAt && <span className="text-[10px]">Uploaded: {new Date(photo.uploadedAt).toLocaleString()}</span>}
+                      </div>
+                      {photo.dataUri && (
+                        <div className="space-y-1">
+                          <img src={photo.dataUri} alt={photo.filename || `Evidence ${idx + 1}`} className="max-w-full max-h-64 rounded-md border border-border object-contain" />
+                          <a href={photo.dataUri} target="_blank" rel="noopener noreferrer" className="text-xs text-amber-500 hover:underline">View Full Image ↗</a>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Map */}
         <Card>
@@ -380,7 +444,10 @@ export function IncidentDetailView() {
               )}
             </CardContent>
           </Card>
-        )}
+                )}
+
+        {/* Resource & Logistics Tracking (GO LIVE / NAVIGATE + lifecycle) */}
+        <ResourceTrackingCard incident={incident} resources={resources} onConfirmArrival={confirmArrival} />
 
         {/* Timeline */}
         <Card>

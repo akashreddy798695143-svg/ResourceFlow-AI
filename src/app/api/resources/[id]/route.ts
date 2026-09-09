@@ -5,7 +5,7 @@ import { ok, err, parseBody } from '@/lib/api'
 import { handleResourceUnavailable } from '@/lib/workflows/incident-workflow'
 import type { ResourceStatus } from '@prisma/client'
 
-const STATUSES: ResourceStatus[] = ['AVAILABLE', 'ASSIGNED', 'EN_ROUTE', 'ON_SCENE', 'UNAVAILABLE']
+const STATUSES: ResourceStatus[] = ['AVAILABLE', 'ASSIGNED', 'EN_ROUTE', 'ON_SCENE', 'UNAVAILABLE', 'ARRIVED']
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {

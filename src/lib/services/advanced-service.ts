@@ -175,28 +175,28 @@ export async function getIncidentGraph() {
 export async function resolveResourceConflicts() {
   const active = await db.resourceAssignment.findMany({
     where: { status: 'ASSIGNED', replacedAt: null },
-    include: { resource: true, incident: true },
+    include: { Resource: true, Incident: true },
   })
   const byResource: Record<string, typeof active> = {}
   for (const a of active) (byResource[a.resourceId] ||= []).push(a)
   const conflicts: Json[] = []
   for (const [resourceId, list] of Object.entries(byResource)) {
     const overCommitted = list.length > 1
-    const unavailable = list[0].resource.status === 'UNAVAILABLE'
+    const unavailable = list[0].Resource.status === 'UNAVAILABLE'
     if (!overCommitted && !unavailable) continue
-    const ranked = [...list].sort((a, b) => num(b.incident.riskScore) - num(a.incident.riskScore))
+    const ranked = [...list].sort((a, b) => num(b.Incident.riskScore) - num(a.Incident.riskScore))
     const keep = ranked[0]
     const release = ranked.slice(1)
     for (const r of release) {
       conflicts.push({
         resourceId,
-        resourceCode: keep.resource.resourceCode,
+        resourceCode: keep.Resource.resourceCode,
         conflictType: overCommitted ? 'DOUBLE_ASSIGNMENT' : 'ASSIGNED_UNAVAILABLE',
-        keepIncident: keep.incident.incidentCode,
-        keepRisk: keep.incident.riskScore,
-        releaseIncident: r.incident.incidentCode,
-        releaseRisk: r.incident.riskScore,
-        recommendation: `Reassign ${r.incident.incidentCode} — ${keep.incident.incidentCode} has higher risk score (${num(keep.incident.riskScore)} vs ${num(r.incident.riskScore)}); next-best unit or marketplace request should cover it.`,
+        keepIncident: keep.Incident.incidentCode,
+        keepRisk: keep.Incident.riskScore,
+        releaseIncident: r.Incident.incidentCode,
+        releaseRisk: r.Incident.riskScore,
+        recommendation: `Reassign ${r.Incident.incidentCode} — ${keep.Incident.incidentCode} has higher risk score (${num(keep.Incident.riskScore)} vs ${num(r.Incident.riskScore)}); next-best unit or marketplace request should cover it.`,
       })
     }
   }
@@ -214,20 +214,20 @@ export async function getResponderWorkload() {
   const responders = await db.user.findMany({
     where: { role: 'RESPONDER', active: true },
     include: {
-      resourceOps: {
+      ResourceAssignment: {
         where: { status: 'ASSIGNED', replacedAt: null },
-        include: { incident: { select: { incidentCode: true, riskScore: true, riskLevel: true, status: true } } },
+        include: { Incident: { select: { incidentCode: true, riskScore: true, riskLevel: true, status: true } } },
       },
     },
   })
   const rows = responders.map((r) => {
-    const load = r.resourceOps.length
-    const maxRisk = Math.max(0, ...r.resourceOps.map((a) => num(a.incident.riskScore)))
+    const load = r.ResourceAssignment.length
+    const maxRisk = Math.max(0, ...r.ResourceAssignment.map((a) => num(a.Incident.riskScore)))
     const loadRisk = clamp(load * 35)
     const risk = clamp(Math.round(loadRisk * 0.6 + maxRisk * 0.4))
     return {
       id: r.id, name: r.name, email: r.email, activeAssignments: load,
-      incidents: r.resourceOps.map((a) => ({ code: a.incident.incidentCode, riskScore: a.incident.riskScore, status: a.incident.status })),
+      incidents: r.ResourceAssignment.map((a) => ({ code: a.Incident.incidentCode, riskScore: a.Incident.riskScore, status: a.Incident.status })),
       maxIncidentRisk: maxRisk || null,
       riskScore: risk,
       riskLevel: levelFor(risk),
@@ -527,9 +527,9 @@ export async function getExplanations(incidentId: string) {
   const inc = await db.incident.findUnique({
     where: { id: incidentId },
     include: {
-      recommendations: { orderBy: { createdAt: 'desc' }, take: 5 },
-      events: { orderBy: { createdAt: 'asc' }, take: 50 },
-      approvals: { orderBy: { createdAt: 'desc' }, take: 3 },
+      AIRecommendation: { orderBy: { createdAt: 'desc' }, take: 5 },
+      IncidentEvent: { orderBy: { createdAt: 'asc' }, take: 50 },
+      Approval: { orderBy: { createdAt: 'desc' }, take: 3 },
     },
   })
   if (!inc) throw new Error('Incident not found')
@@ -539,22 +539,22 @@ export async function getExplanations(incidentId: string) {
   })
   const trust = insights.find((i) => i.feature === 'INCIDENT_TRUST')
   let recommendationPayload: Json | null = null
-  try { recommendationPayload = inc.recommendations[0] ? JSON.parse(inc.recommendations[0].payload) : null } catch { /* ignore */ }
+  try { recommendationPayload = inc.AIRecommendation[0] ? JSON.parse(inc.AIRecommendation[0].payload) : null } catch { /* ignore */ }
   return {
     incident: { id: inc.id, code: inc.incidentCode, type: inc.type, status: inc.status, riskScore: inc.riskScore, riskLevel: inc.riskLevel },
     riskReasons: inc.riskReasons ? arr(inc.riskReasons) : [],
     aiConfidence: inc.aiConfidence,
     aiAvailable: inc.aiAvailable,
     recommendation: recommendationPayload
-      ? { source: inc.recommendations[0]?.source, reason: recommendationPayload.reason ?? null, recommended: recommendationPayload.recommended_resource ?? null, alternatives: recommendationPayload.alternative_resources ?? [] }
+      ? { source: inc.AIRecommendation[0]?.source, reason: recommendationPayload.reason ?? null, recommended: recommendationPayload.recommended_resource ?? null, alternatives: recommendationPayload.alternative_resources ?? [] }
       : null,
     trustScore: trust ? { score: (trust.payload as Json).score, verdict: (trust.payload as Json).verdict, signals: (trust.payload as Json).signals } : null,
-    workflowTimeline: inc.events.map((e) => {
+    workflowTimeline: inc.IncidentEvent.map((e) => {
       let label: string = e.eventType
       try { label = JSON.parse(e.data)?.label ?? e.eventType } catch { /* keep */ }
       return { at: e.createdAt, type: e.eventType, label }
     }),
-    approvals: inc.approvals.map((a) => ({ decision: a.decision, reason: a.reason, reviewedAt: a.reviewedAt })),
+    approvals: inc.Approval.map((a) => ({ decision: a.decision, reason: a.reason, reviewedAt: a.reviewedAt })),
     note: 'Every AI decision is traceable to its inputs — this center aggregates those traces.',
   }
 }
@@ -562,8 +562,8 @@ export async function getExplanations(incidentId: string) {
 // 20. Post-Disaster AI Learning Loop
 export async function runLearningLoop(userId?: string) {
   const resolved = await db.incident.findMany({
-    where: { status: { in: ['RESOLVED', 'CLOSED'] }, learningEntries: { none: {} } },
-    include: { events: true },
+    where: { status: { in: ['RESOLVED', 'CLOSED'] }, LearningEntry: { none: {} } },
+    include: { IncidentEvent: true },
     take: 20,
     orderBy: { resolvedAt: 'desc' },
   })
@@ -572,7 +572,7 @@ export async function runLearningLoop(userId?: string) {
     const ackMin = inc.acknowledgedAt ? (inc.acknowledgedAt.getTime() - inc.createdAt.getTime()) / 60000 : null
     const arriveMin = inc.arrivedAt ? (inc.arrivedAt.getTime() - inc.createdAt.getTime()) / 60000 : null
     const resolveMin = inc.resolvedAt ? (inc.resolvedAt.getTime() - inc.createdAt.getTime()) / 60000 : null
-    const reassignments = inc.events.filter((e) => e.eventType === 'RESOURCE_REASSIGNED' || e.eventType === 'RESOURCE_UNAVAILABLE').length
+    const reassignments = inc.IncidentEvent.filter((e) => e.eventType === 'RESOURCE_REASSIGNED' || e.eventType === 'RESOURCE_UNAVAILABLE').length
     const escalations = inc.escalationLevel
     const lessons: { category: string; lesson: string; recommendation: string; confidence: number }[] = []
     if (ackMin != null && ackMin > 20) lessons.push({ category: 'TIMING', lesson: `${inc.incidentCode}: acknowledgment took ${Math.round(ackMin)} min.`, recommendation: 'Tighten approval SLA for HIGH/CRITICAL incidents.', confidence: 0.8 })
@@ -594,7 +594,7 @@ export async function runLearningLoop(userId?: string) {
 export async function listLearningEntries() {
   return db.learningEntry.findMany({
     orderBy: { createdAt: 'desc' }, take: 50,
-    include: { incident: { select: { incidentCode: true } } },
+    include: { Incident: { select: { incidentCode: true } } },
   })
 }
 // 1. AI Disaster Digital Twin — live state snapshot for an incident (or global).
@@ -603,8 +603,8 @@ export async function getDigitalTwin(incidentId?: string) {
     ? await db.incident.findUnique({
         where: { id: incidentId },
         include: {
-          assignments: { where: { replacedAt: null }, include: { resource: true } },
-          events: { orderBy: { createdAt: 'asc' }, take: 30 },
+          ResourceAssignment: { where: { replacedAt: null }, include: { Resource: true } },
+          IncidentEvent: { orderBy: { createdAt: 'asc' }, take: 30 },
         },
       })
     : null
@@ -621,12 +621,12 @@ export async function getDigitalTwin(incidentId?: string) {
   return {
     scope: inc ? { id: inc.id, code: inc.incidentCode, type: inc.type, status: inc.status, location: inc.location, lat: inc.latitude, lng: inc.longitude } : { scope: 'GLOBAL' },
     environment: { weather: inc?.weather ?? null, peopleAffected: inc?.aiPeopleAffected ?? null, riskScore: inc?.riskScore ?? null, riskLevel: inc?.riskLevel ?? null },
-    resources: { total: resources.length, byStatus, deployed: inc ? inc.assignments.length : undefined },
+    resources: { total: resources.length, byStatus, deployed: inc ? inc.ResourceAssignment.length : undefined },
     safeZones: zones.map((z) => ({ code: z.zoneCode, type: z.type, capacity: z.capacity, occupancy: z.occupancy, status: z.status, lat: z.latitude, lng: z.longitude })),
     hospitals: hospitals.slice(0, 8).map((h) => ({ name: h.name, availableBeds: h.availableBeds, erLoadPct: h.erLoadPct, status: h.status, demo: h.demo })),
     corridors: corridors.map((c) => ({ code: c.corridorCode, status: c.status, etaMinutes: c.etaMinutes, riskScore: c.riskScore })),
     shipments: shipments.map((s) => ({ code: s.shipmentCode, status: s.status, step: s.currentStep })),
-    timeline: inc ? inc.events.map((e) => ({ at: e.createdAt, type: e.eventType })) : [],
+    timeline: inc ? inc.IncidentEvent.map((e) => ({ at: e.createdAt, type: e.eventType })) : [],
     note: 'Digital twin mirrors live platform state; hospital + weather feeds fall back to DEMO when external APIs are unavailable.',
   }
 }

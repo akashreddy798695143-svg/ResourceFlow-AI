@@ -58,10 +58,10 @@ export async function sendResolutionEmails(incidentId: string, resolvedByUserId?
       where: { id: incidentId },
       include: {
         User: true,
-        events: { orderBy: { createdAt: 'asc' } },
-        assignments: { orderBy: { assignedAt: 'asc' } },
-        recommendations: { orderBy: { createdAt: 'asc' } },
-        approvals: { orderBy: { createdAt: 'asc' } },
+        IncidentEvent: { orderBy: { createdAt: 'asc' } },
+        ResourceAssignment: { orderBy: { assignedAt: 'asc' } },
+        AIRecommendation: { orderBy: { createdAt: 'asc' } },
+        Approval: { orderBy: { createdAt: 'asc' } },
       },
     })
     if (!incident) return
@@ -387,7 +387,7 @@ export async function retryResolutionEmail(
   // Re-fetch the incident to rebuild the email
   const incident = await db.incident.findUnique({
     where: { id: incidentId },
-    include: { User: true, events: { orderBy: { createdAt: 'asc' } }, assignments: { orderBy: { assignedAt: 'asc' } }, recommendations: true, approvals: true },
+    include: { User: true, IncidentEvent: { orderBy: { createdAt: 'asc' } }, ResourceAssignment: { orderBy: { assignedAt: 'asc' } }, AIRecommendation: true, Approval: true },
   })
   if (!incident) return { ok: false, error: 'Incident not found' }
 
