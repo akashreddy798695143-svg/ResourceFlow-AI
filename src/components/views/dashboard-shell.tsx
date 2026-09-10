@@ -8,8 +8,9 @@ import { apiGet, apiPatch, apiPost } from '@/lib/api-client'
 import { toast } from 'sonner'
 import {
   ShieldAlert, LayoutDashboard, Map, Package, CheckSquare, FlaskConical,
-  BarChart3, ScrollText, Settings, LogOut, Bell, Plus, Search, RadioTower,
+    BarChart3, ScrollText, Settings, LogOut, Bell, Plus, Search, RadioTower,
   AlertTriangle, Menu, X, Activity, ChevronRight, Brain, LifeBuoy, Users, HandHeart,
+  MessageCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -23,6 +24,7 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { Notification, Incident } from '@/lib/types'
 import { NotificationTypeBadge } from '@/components/shared/badges'
+import { Footer } from '@/components/shared/footer'
 
 interface NavItem {
   label: string
@@ -44,7 +46,9 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Audit Logs', path: '/audit', icon: ScrollText, roles: ['ADMIN'] },
   { label: 'Volunteer Mgmt', path: '/volunteer-management', icon: HandHeart, roles: ['DISASTER_OFFICER', 'ADMIN'] },
   { label: 'Volunteer Map', path: '/volunteer-map', icon: Map, roles: ['DISASTER_OFFICER', 'ADMIN'] },
-  { label: 'Settings', path: '/settings', icon: Settings, roles: ['ADMIN', 'DISASTER_OFFICER', 'RESPONDER'] },
+    { label: 'Settings', path: '/settings', icon: Settings, roles: ['ADMIN', 'DISASTER_OFFICER', 'RESPONDER'] },
+  // Emergency communication chat — available to every role
+  { label: 'Chat', path: '/chat', icon: MessageCircle, roles: ['CITIZEN', 'RESPONDER', 'DISASTER_OFFICER', 'ADMIN'] },
   // Citizen
   { label: 'Safety Center', path: '/safety-center', icon: LifeBuoy, roles: ['CITIZEN'] },
   { label: 'My Reports', path: '/citizen-dashboard', icon: LayoutDashboard, roles: ['CITIZEN'] },
@@ -57,8 +61,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
   const { path, navigate } = useRouter()
   const connected = useRealtimeConnection()
-  const [notifications, setNotifications] = useState<Notification[]>([])
+    const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [chatUnread, setChatUnread] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const allowed = NAV_ITEMS.filter((item) => user && item.roles.includes(user.role))
@@ -80,6 +85,28 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       try {
         const res = await apiGet<{ notifications: Notification[] }>('/api/notifications?unread=1')
         if (!cancelled) { setNotifications(res.notifications); setUnreadCount(res.notifications.length) }
+      } catch { /* ignore */ }
+    }
+    run()
+    const interval = setInterval(run, 15000)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [])
+
+    const loadChatUnread = async () => {
+    try {
+      const res = await apiGet<{ unreadCount: number }>('/api/chat/unread')
+      setChatUnread(res.unreadCount)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      try {
+        const res = await apiGet<{ unreadCount: number }>('/api/chat/unread')
+        if (!cancelled) setChatUnread(res.unreadCount)
       } catch { /* ignore */ }
     }
     run()
@@ -282,6 +309,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   key={item.path}
                   onClick={() => {
                     navigate(item.path)
+                    if (item.path === '/chat') setChatUnread(0)
                     setSidebarOpen(false)
                   }}
                   className={cn(
@@ -293,6 +321,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                   <span className="truncate">{item.label}</span>
+                  {item.path === '/chat' && chatUnread > 0 && (
+                    <Badge variant="secondary" className="ml-auto h-5 px-1.5 text-[10px] font-mono">
+                      {chatUnread > 9 ? '9+' : chatUnread}
+                    </Badge>
+                  )}
                   {active && <ChevronRight className="h-3.5 w-3.5 ml-auto opacity-70" />}
                 </button>
               )
@@ -316,14 +349,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <main className="rf-app-main flex-1 min-w-0 overflow-y-auto rf-scroll bg-background">
           <div className="min-h-full p-4 md:p-6">{children}</div>
           {/* Footer */}
-          <footer className="mt-auto border-t border-border bg-card/30 px-4 py-3 text-[11px] text-muted-foreground">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span>
-                RESOURCEFLOW AI · AI-Powered Disaster Response Platform
-              </span>
-              <span className="font-mono">Audit trail enabled</span>
-            </div>
-          </footer>
+          <Footer />
         </main>
       </div>
     </div>

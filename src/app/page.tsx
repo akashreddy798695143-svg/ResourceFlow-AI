@@ -26,6 +26,12 @@ import { SettingsView } from '@/components/views/settings'
 import { VolunteerRegisterView } from '@/components/views/citizen/volunteer-register'
 import { VolunteerManagementView } from '@/components/views/officer/volunteer-management'
 import { VolunteerMapView } from '@/components/views/officer/volunteer-map'
+import { ChatView } from '@/components/views/chat/chat-view'
+import { PrivacyPolicyPage } from '@/components/views/legal/privacy-policy'
+import { TermsConditionsPage } from '@/components/views/legal/terms-conditions'
+import { SafetyPage } from '@/components/views/legal/safety'
+import { ContactPage } from '@/components/views/legal/contact'
+import { AboutPage } from '@/components/views/legal/about'
 
 
 function Routed() {
@@ -81,6 +87,14 @@ function Routed() {
     )
   }
 
+  // Public pages accessible to all users (before auth check)
+  const publicRoute = (path || '/').replace(/^\//, '')
+  if (publicRoute === 'privacy') return <PrivacyPolicyPage />
+  if (publicRoute === 'terms') return <TermsConditionsPage />
+  if (publicRoute === 'safety') return <SafetyPage />
+  if (publicRoute === 'contact') return <ContactPage />
+  if (publicRoute === 'about') return <AboutPage />
+
   // Not authenticated: show landing or auth views
   if (!user) {
     if (path === '/login') return <LoginView />
@@ -90,6 +104,9 @@ function Routed() {
 
   // Authenticated: route by path
   const route = (path || '/').replace(/^\//, '')
+
+  // Emergency communication chat (available to all roles)
+  if (route.startsWith('chat')) return <DashboardShell><ChatView /></DashboardShell>
 
   // Citizen views
   if (user.role === 'CITIZEN') {

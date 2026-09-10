@@ -299,7 +299,7 @@ model Incident {
   OperationalObservation                             OperationalObservation[]
   safeZones                                          SafeZone[]
   shipments                                          Shipment[]
-  VolunteerAssignment                                 VolunteerAssignment[]
+  VolunteerAssignment                                VolunteerAssignment[]
 
   // The reporter (FK) — always from session, never from frontend
   @@index([status])
@@ -884,24 +884,24 @@ model VerifiedAlert {
 }
 
 model VolunteerRegistration {
-  id                String          @id @default(cuid())
-  userId            String          @unique
+  id                String                    @id @default(cuid())
+  userId            String                    @unique
   skills            String
   availability      String
   areas             String?
-  hasTransport      Boolean         @default(false)
-  status            VolunteerStatus @default(PENDING)
-  verifiedSafe      Boolean         @default(false)
+  hasTransport      Boolean                   @default(false)
+  status            VolunteerStatus           @default(PENDING)
+  verifiedSafe      Boolean                   @default(false)
   reviewedById      String?
   reviewNote        String?
   // Location fields (only stored with explicit permission)
   latitude          Float?
   longitude         Float?
   locationTimestamp DateTime?
-  locationSharing   Boolean         @default(false)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @default(now())
-  User              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locationSharing   Boolean                   @default(false)
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @default(now())
+  User              User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   assignments       VolunteerAssignment[]
   locationUpdates   VolunteerLocationUpdate[]
 
@@ -910,18 +910,18 @@ model VolunteerRegistration {
 }
 
 model VolunteerAssignment {
-  id           String    @id @default(cuid())
-  volunteerId  String
-  incidentId   String
-  status       String    @default("RECOMMENDED") // RECOMMENDED, APPROVED, REJECTED, COMPLETED
-  recommendedBy String?   // "AI" or officer userId
-  approvedById String?
-  approvedAt   DateTime?
-  note         String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @default(now())
-  volunteer    VolunteerRegistration @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
-  incident     Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  id            String                @id @default(cuid())
+  volunteerId   String
+  incidentId    String
+  status        String                @default("RECOMMENDED") // RECOMMENDED, APPROVED, REJECTED, COMPLETED
+  recommendedBy String? // "AI" or officer userId
+  approvedById  String?
+  approvedAt    DateTime?
+  note          String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @default(now())
+  volunteer     VolunteerRegistration @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+  incident      Incident              @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
   @@index([volunteerId])
   @@index([incidentId])
@@ -929,12 +929,12 @@ model VolunteerAssignment {
 }
 
 model VolunteerLocationUpdate {
-  id          String   @id @default(cuid())
+  id          String                @id @default(cuid())
   volunteerId String
   latitude    Float
   longitude   Float
   accuracy    Float?
-  timestamp   DateTime @default(now())
+  timestamp   DateTime              @default(now())
   volunteer   VolunteerRegistration @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
 
   @@index([volunteerId, timestamp])

@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Footer } from '@/components/shared/footer'
 
 const incidentVisuals = [
   { label: 'FLOOD RESPONSE', image: 'https://images.unsplash.com/photo-1547683905-f686c2a8830a?auto=format&fit=crop&w=2200&q=78' },
@@ -282,12 +283,9 @@ export function LandingView() {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 mt-auto border-t border-border bg-card/75 px-4 py-4 text-[11px] text-muted-foreground backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-2">
-          <span>RESOURCEFLOW AI · Prototype decision-support score — not a medically or scientifically validated model.</span>
-          <span className="font-mono">Hackathon build · v1.0</span>
-        </div>
-      </footer>
+      <div className="relative z-10 mt-auto">
+        <Footer />
+      </div>
     </div>
   )
 }

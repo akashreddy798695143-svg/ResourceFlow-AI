@@ -23,39 +23,23 @@ export function PrivacyModal({ open, onClose }) {
   return (
     <ModalShell open={open} onClose={onClose} title="Privacy Policy">
       <div className="prose prose-sm dark:prose-invert max-w-none">
-        <p className={P}>ResourceFlow AI is committed to protecting your privacy. This Privacy Policy explains what information we collect, how we use it, and your rights.</p>
-        <h3 className={H}>Information We Collect</h3>
-        <p className={P}>We collect info you provide: name, email, phone, location, incident descriptions, photos, safety-check messages. We also auto-collect device info (IP, browser, OS).</p>
-        <h3 className={H}>Location Data</h3>
-        <p className={P}>Location is collected only when you actively report an incident, send SOS, or check in. Essential for routing resources. Never used for commercial tracking.</p>
-        <h3 className={H}>SOS & Incident Information</h3>
-        <p className={P}>SOS/incident data is shared with authorized emergency personnel. Retained for post-incident analysis and audit.</p>
-        <h3 className={H}>Photos & Evidence</h3>
-        <p className={P}>Photos are processed by AI for incident analysis and only visible to authorized officers/responders.</p>
-        <h3 className={H}>Safety Contacts</h3>
-        <p className={P}>Safety contacts stored securely, never shared with other citizens. Notifications go only to verified contacts.</p>
-        <h3 className={H}>Incident Data</h3>
-        <p className={P}>Incidents stored to coordinate response. After resolution, data used in aggregate anonymized form for analytics.</p>
-        <h3 className={H}>AI Processing</h3>
-        <p className={P}>Input processed by AI (Gemini) server-side. API keys never exposed. Outputs are decision-support, always reviewed by officers.</p>
-        <h3 className={H}>Notification & Email Processing</h3>
-        <p className={P}>Notifications via in-app, email, SMS, WhatsApp. Configure preferences in Settings.</p>
-        <h3 className={H}>Authorized Access</h3>
-        <p className={P}>Access is role-based. Data scoped by ownership. Never sold or rented.</p>
+        <p className={P}>ResourceFlow AI is committed to protecting your privacy. This Privacy Policy explains what information we collect, how we use it, and the measures we take to safeguard your data.</p>
+        <h3 className={H}>Information Collection</h3>
+        <p className={P}>User information is collected only for emergency response and platform functionality. We collect information you provide directly, such as name, email, phone, incident descriptions, photos, and safety-check messages.</p>
+        <h3 className={H}>Location Information</h3>
+        <p className={P}>Location information is used for emergency coordination and safety features. Location is collected only when you actively report an incident, send SOS, or check in. Never used for commercial tracking.</p>
+        <h3 className={H}>Shared Photos and Incident Information</h3>
+        <p className={P}>Shared photos and incident information are accessible only to authorized users. Photos are processed by AI for incident analysis and only visible to authorized officers and responders.</p>
+        <h3 className={H}>Personal Information Protection</h3>
+        <p className={P}>Personal information should not be exposed to unauthorized users. Access is role-based and strictly controlled. Data scoped by ownership and need-to-know basis.</p>
+        <h3 className={H}>Emergency Location Sharing</h3>
+        <p className={P}>Emergency location sharing should be handled securely. Users should be informed when location sharing is active. Location data shared during emergencies is accessible only to authorized emergency personnel.</p>
         <h3 className={H}>Data Security</h3>
-        <p className={P}>Argon2id hashing, JWT sessions, HTTPS, server-side RBAC. Credentials in env vars, never exposed.</p>
-        <h3 className={H}>Data Retention</h3>
-        <p className={P}>Data retained as needed. Deletion requests accepted subject to emergency retention.</p>
+        <p className={P}>Data should be protected using appropriate security controls. We employ encryption in transit (HTTPS/TLS), secure password hashing (Argon2id), server-side RBAC, and secure credential storage.</p>
         <h3 className={H}>User Rights</h3>
-        <p className={P}>You may access, correct, or delete your data. Contact support@resourceflow.ai.</p>
-        <h3 className={H}>Third-Party Services</h3>
-        <p className={P}>We use SMTP, Twilio, OpenStreetMap/Esri, Google Gemini. Each under its own privacy policy.</p>
+        <p className={P}>You may access, correct, or delete your data. Contact akashreddy798695143@gmail.com.</p>
         <h3 className={H}>Emergency Limitations</h3>
-        <p className={P}>ResourceFlow AI is a decision-support tool and does NOT replace official emergency services. Call your local emergency number.</p>
-        <h3 className={H}>Policy Updates</h3>
-        <p className={P}>We may update this policy. Changes posted on this page.</p>
-        <h3 className={H}>Contact</h3>
-        <p className={P}>Questions? Contact support@resourceflow.ai.</p>
+        <p className={P}>ResourceFlow AI is a decision-support tool and does NOT replace official emergency services. In any real emergency, immediately call your local emergency number: 911 (North America), 112 (Europe/Asia/Africa), 999 (UK), 111 (Australia), 110 (Japan), 108 (India).</p>
       </div>
     </ModalShell>
   )
@@ -64,36 +48,25 @@ export function TermsModal({ open, onClose }) {
   return (
     <ModalShell open={open} onClose={onClose} title="Terms & Conditions">
       <div className="prose prose-sm dark:prose-invert max-w-none">
-        <p className={P}>These Terms govern your use of the ResourceFlow AI platform.</p>
-        <h3 className={H}>Purpose</h3>
-        <p className={P}>ResourceFlow AI is an AI-powered disaster risk forecasting, early-warning, and emergency coordination platform. It converts citizen reports into structured data, calculates risk scores, forecasts resource demand, recommends allocation, and coordinates response with human officer oversight.</p>
-        <h3 className={H}>Responsible Reporting</h3>
-        <p className={P}>Provide accurate and truthful information. Knowingly false reports or prank SOS calls may result in account suspension. Inaccurate reports can endanger lives.</p>
-        <h3 className={H}>AI Limitations</h3>
-        <p className={P}>AI outputs are estimates and decision-support tools, NOT guaranteed predictions. All AI recommendations are subject to human review by authorized officers.</p>
-        <p className={P}>Risk forecasts are not guaranteed predictions. AI risk models are heuristic-based with uncertainty indicators. They support preparedness planning, not professional meteorological, geological, or emergency management services.</p>
-        <h3 className={H}>Risk Assessment Limitations</h3>
-        <p className={P}>Risk scores are computed from available data sources, which may include simulated/demo data when external feeds are unavailable. All simulated data is clearly labelled.</p>
-        <h3 className={H}>Emergency Limitations</h3>
-        <p className={P}>AI recommendations do not replace authorized emergency personnel or official emergency services. In any real emergency, always contact your local emergency services directly. We are not responsible for any failure to provide timely emergency response.</p>
-        <h3 className={H}>Prohibited Misuse</h3>
-        <p className={P}>Do not: (a) impair emergency response; (b) manipulate AI systems or risk scores; (c) access data without authorization; (d) use for unrelated commercial purposes; (e) reverse-engineer or scrape the platform.</p>
-        <h3 className={H}>Intellectual Property</h3>
-        <p className={P}>The platform, including logos, designs, text, graphics, and software, is protected by copyright, trademark, and other IP laws.</p>
-        <h3 className={H}>Emergency Limitations</h3>
-        <p className={P}>AI recommendations do not replace authorized emergency personnel or official emergency services. In any real emergency, always contact your local emergency services directly. We are not responsible for any failure to provide timely emergency response.</p>
-        <h3 className={H}>Prohibited Misuse</h3>
-        <p className={P}>Do not: (a) impair emergency response; (b) manipulate AI systems or risk scores; (c) access data without authorization; (d) use for unrelated commercial purposes; (e) reverse-engineer or scrape the platform.</p>
-        <h3 className={H}>Intellectual Property</h3>
-        <p className={P}>The platform, including logos, designs, text, graphics, and software, is protected by copyright, trademark, and other IP laws.</p>
+        <p className={P}>These Terms & Conditions govern your use of the ResourceFlow AI platform. By accessing or using our platform, you agree to be bound by these terms.</p>
+        <h3 className={H}>Responsible Use</h3>
+        <p className={P}>Users must use the platform responsibly. ResourceFlow AI is designed to support emergency response and disaster coordination. All users are expected to act in good faith and use the platform only for its intended purposes.</p>
+        <h3 className={H}>Accuracy of Emergency Information</h3>
+        <p className={P}>Emergency information should be accurate. Users must ensure that any incident reports, safety checks, or emergency information they provide is truthful and accurate to the best of their knowledge. Providing false or misleading emergency information may have serious consequences.</p>
+        <h3 className={H}>Platform Purpose</h3>
+        <p className={P}>The platform is intended to support disaster response and does not replace official emergency authorities. ResourceFlow AI provides AI-assisted risk assessment and decision support. It is not a substitute for professional emergency services, law enforcement, or disaster management authorities.</p>
+        <h3 className={H}>Prohibited Uses</h3>
+        <p className={P}>Users must not misuse the communication, location or reporting features. Prohibited activities include: submitting false incident reports, impersonating emergency personnel, using the platform to harass or threaten others, interfering with emergency response operations, or using the platform for any unlawful purpose.</p>
+        <h3 className={H}>Privacy and Data Protection</h3>
+        <p className={P}>Unauthorized access or sharing of private information is prohibited. Users must not attempt to access data belonging to other users without authorization. Sharing another person&apos;s private information, location data, or incident details without their explicit consent is strictly forbidden.</p>
+        <h3 className={H}>Emergency Services</h3>
+        <p className={P}>In any real emergency, immediately call your local emergency number: 911 (North America), 112 (Europe/Asia/Africa), 999 (UK), 111 (Australia), 110 (Japan), 108 (India). ResourceFlow AI supplements but does not replace these services.</p>
         <h3 className={H}>Limitation of Liability</h3>
-        <p className={P}>To the fullest extent permitted by law, ResourceFlow AI shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of data, profits, or business.</p>
-        <h3 className={H}>Governing Law</h3>
-        <p className={P}>Governed by the laws of the jurisdiction in which ResourceFlow AI operates.</p>
+        <p className={P}>ResourceFlow AI is provided &quot;as is&quot; without warranties of any kind. The platform is a decision-support tool and its outputs should be validated with authorized personnel.</p>
         <h3 className={H}>Changes to Terms</h3>
         <p className={P}>We may update these Terms from time to time. Material changes posted on our platform. Continued use constitutes acceptance.</p>
         <h3 className={H}>Contact</h3>
-        <p className={P}>Questions about these Terms? Contact support@resourceflow.ai.</p>
+        <p className={P}>Questions about these Terms? Contact akashreddy798695143@gmail.com.</p>
       </div>
     </ModalShell>
   )
@@ -121,10 +94,11 @@ export function DisclaimerModal({ open, onClose }) {
     <ModalShell open={open} onClose={onClose} title="Emergency Disclaimer">
       <div className="prose prose-sm dark:prose-invert max-w-none">
         <h3 className={H}>Important - Not a Substitute for Emergency Services</h3>
+        <p className={P}>ResourceFlow AI is designed to support emergency coordination, information sharing and disaster-response decision making. It does not replace official emergency services or authorities.</p>
         <p className={P}>ResourceFlow AI provides AI-assisted risk assessment and decision support. Risk forecasts are not guaranteed predictions.</p>
         <p className={P}>AI recommendations do not replace authorized emergency personnel or official emergency services.</p>
         <p className={P}>In any real emergency, immediately call your local emergency number: 911 (North America), 112 (Europe/Asia/Africa), 999 (UK), 111 (Australia), 110 (Japan), 108 (India).</p>
-        <p className={P}>Risk forecasts are heuristic-based with uncertainty indicators. Validate with authorized personnel. Simulated/demo data is clearly labelled.</p>
+        <p className={P}>Risk forecasts are heuristic-based with uncertainty indicators. Validate with authorized personnel.</p>
         <p className={P}>By using ResourceFlow AI, you acknowledge these limitations. The platform is provided "as is" without warranties.</p>
       </div>
     </ModalShell>

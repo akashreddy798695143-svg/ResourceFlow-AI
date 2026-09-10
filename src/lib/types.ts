@@ -341,3 +341,53 @@ export interface VolunteerLocation {
   availability: string
   status: string
 }
+
+// ---- Emergency communication chat (uses existing ChatConversation / ChatMessage) ----
+
+export type ChatMessageKind = 'TEXT' | 'LOCATION' | 'INCIDENT_LOCATION' | 'IMAGE'
+
+export interface ChatParticipant {
+  id: string
+  name: string
+  role: Role
+}
+
+export interface ChatLastMessage {
+  id: string
+  kind: string
+  body: string | null
+  senderId: string
+  createdAt: string
+  photoName: string | null
+}
+
+export interface ChatConversation {
+  id: string
+  participantA: string
+  participantB: string
+  otherParticipant: ChatParticipant | null
+  lastMessage: ChatLastMessage | null
+  unreadCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ChatMessage {
+  id: string
+  conversationId: string
+  senderId: string
+  sender: ChatParticipant | null
+  kind: string
+  body: string | null
+  latitude: number | null
+  longitude: number | null
+  accuracy: number | null
+  photoUrl: string | null
+  photoMime: string | null
+  photoName: string | null
+  incidentId: string | null
+  incidentTitle: string | null
+  locationLabel: string | null
+  readAt: string | null
+  createdAt: string
+}
