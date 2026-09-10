@@ -449,6 +449,48 @@ model NotificationLog {
   @@index([userId])
 }
 
+// Secure in-app 1:1 chat (Citizen ↔ Officer ↔ Admin ↔ Responder ↔ Volunteer).
+// Conversations are strictly two-participant, stored with normalized participant
+// ids (participantA < participantB) so each pair maps to exactly one thread.
+model ChatConversation {
+  id           String        @id @default(cuid())
+  participantA String
+  participantB String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  messages     ChatMessage[]
+
+  @@unique([participantA, participantB])
+  @@index([participantA])
+  @@index([participantB])
+}
+
+model ChatMessage {
+  id             String           @id @default(cuid())
+  conversationId String
+  senderId       String
+  // TEXT | LOCATION | INCIDENT_LOCATION | IMAGE
+  kind           String           @default("TEXT")
+  body           String?
+  latitude       Float?
+  longitude      Float?
+  accuracy       Float?
+  photoUrl       String?
+  photoMime      String?
+  photoName      String?
+  incidentId     String?
+  incidentTitle  String?
+  locationLabel  String?
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User             @relation("ChatMessagesSent", fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@index([readAt])
+}
+
 model OperationalObservation {
   id          String   @id @default(cuid())
   incidentId  String
@@ -797,6 +839,7 @@ model User {
   smsNotifications       Boolean                  @default(true)
   role                   Role                     @default(CITIZEN)
   AiInsight              AiInsight[]
+  ChatMessage            ChatMessage[]            @relation("ChatMessagesSent")
   Approval               Approval[]
   AuditLog               AuditLog[]
   CommsBlackout          CommsBlackout[]
