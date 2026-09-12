@@ -44,15 +44,15 @@
 }
 
 :root {
-  --radius: 0.5rem;
-  /* Light theme — clean professional with emergency red primary */
-  --background: oklch(0.99 0 0);
+  --radius: 0.625rem;
+  /* Light theme — clean neutral with amber primary */
+  --background: oklch(0.985 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.55 0.22 25);          /* emergency red */
+  --primary: oklch(0.55 0.18 39);          /* amber-600 */
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -63,55 +63,55 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.55 0.22 25);
-  --chart-1: oklch(0.55 0.22 25);
+  --ring: oklch(0.55 0.18 39);
+  --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.55 0.22 25);
+  --sidebar-primary: oklch(0.55 0.18 39);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.55 0.22 25);
+  --sidebar-ring: oklch(0.55 0.18 39);
 }
 
 .dark {
-  /* Dark theme — professional emergency command center */
-  --background: oklch(0.12 0.02 255);      /* deep navy-slate */
+  /* Dark theme — government emergency command center (deep navy + amber) */
+  --background: oklch(0.145 0.025 255);     /* deep navy-slate */
   --foreground: oklch(0.96 0 0);
-  --card: oklch(0.16 0.02 255);
+  --card: oklch(0.19 0.022 255);
   --card-foreground: oklch(0.96 0 0);
-  --popover: oklch(0.16 0.02 255);
+  --popover: oklch(0.19 0.022 255);
   --popover-foreground: oklch(0.96 0 0);
-  --primary: oklch(0.65 0.22 25);           /* emergency red */
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.22 0.02 255);
+  --primary: oklch(0.7 0.17 60);           /* amber-500 */
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.25 0.025 255);
   --secondary-foreground: oklch(0.96 0 0);
-  --muted: oklch(0.22 0.02 255);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.22 0.02 255);
+  --muted: oklch(0.25 0.025 255);
+  --muted-foreground: oklch(0.72 0 0);
+  --accent: oklch(0.30 0.025 255);
   --accent-foreground: oklch(0.96 0 0);
-  --destructive: oklch(0.65 0.22 25);
-  --border: oklch(0.25 0.02 255);
-  --input: oklch(0.25 0.02 255);
-  --ring: oklch(0.65 0.22 25);
-  --chart-1: oklch(0.65 0.22 25);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.14 0.02 255);
+  --destructive: oklch(0.65 0.24 25);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.7 0.17 60);
+  --chart-1: oklch(0.7 0.17 60);          /* amber */
+  --chart-2: oklch(0.65 0.18 145);        /* emerald */
+  --chart-3: oklch(0.55 0.2 255);         /* blue */
+  --chart-4: oklch(0.75 0.19 320);        /* magenta */
+  --chart-5: oklch(0.65 0.2 12);          /* red-orange */
+  --sidebar: oklch(0.11 0.025 255);       /* darker navy for sidebar */
   --sidebar-foreground: oklch(0.96 0 0);
-  --sidebar-primary: oklch(0.65 0.22 25);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.22 0.02 255);
+  --sidebar-primary: oklch(0.7 0.17 60);
+  --sidebar-primary-foreground: oklch(0.145 0 0);
+  --sidebar-accent: oklch(0.25 0.025 255);
   --sidebar-accent-foreground: oklch(0.96 0 0);
-  --sidebar-border: oklch(0.25 0.02 255);
-  --sidebar-ring: oklch(0.65 0.22 25);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.7 0.17 60);
 }
 
 @layer base {
@@ -120,306 +120,19 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* Subtle professional background */
-    background-image: linear-gradient(180deg, var(--background) 0%, oklch(0.11 0.02 255) 100%);
+    /* Disaster-themed animated background — subtle, professional, not flashy */
+    background-image:
+      /* Flood: horizontal water ripples (blue, very subtle, slow wave) */
+      radial-gradient(ellipse 800px 120px at 20% 90%, oklch(0.45 0.08 240 / 0.04) 0%, transparent 60%),
+      radial-gradient(ellipse 600px 100px at 70% 95%, oklch(0.5 0.10 230 / 0.03) 0%, transparent 55%),
+      /* Earthquake: faint diagonal tremor lines (warm tone, very subtle) */
+      repeating-linear-gradient(135deg, transparent 0px, transparent 80px, oklch(0.6 0.05 30 / 0.015) 80px, oklch(0.6 0.05 30 / 0.015) 81px),
+      /* Road block: dashed yellow lines (horizontal, very faint) */
+      repeating-linear-gradient(90deg, transparent 0px, transparent 120px, oklch(0.7 0.12 80 / 0.012) 120px, oklch(0.7 0.12 80 / 0.012) 140px, transparent 140px, transparent 240px),
+      /* Base gradient: deep navy with amber glow at top */
+      linear-gradient(180deg, oklch(0.16 0.03 260) 0%, oklch(0.145 0.025 255) 50%, oklch(0.13 0.02 250) 100%);
     background-attachment: fixed;
   }
-}
-
-.rf-ai-assistant {
-  position: fixed;
-  right: 1.25rem;
-  bottom: 1.25rem;
-  z-index: 80;
-}
-.rf-ai-launcher {
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(240, 138, 75, 0.25);
-  animation: rf-ai-pulse 3s ease-in-out infinite;
-}
-.rf-ai-panel {
-  width: min(390px, calc(100vw - 2rem));
-  max-height: min(620px, calc(100vh - 2rem));
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: oklch(0.14 0.02 255 / 0.97);
-  color: var(--foreground);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(18px);
-  animation: rf-ai-in 220ms ease-out both;
-}
-.rf-ai-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--border);
-  background: linear-gradient(90deg, oklch(0.65 0.22 25 / 0.15), transparent 65%);
-}
-.rf-ai-icon {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.5rem;
-  color: var(--primary);
-  background: oklch(0.65 0.22 25 / 0.15);
-}
-.rf-ai-messages {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 0.65rem;
-  min-height: 180px;
-  max-height: 390px;
-  overflow-y: auto;
-  padding: 0.85rem;
-}
-.rf-ai-message {
-  display: flex;
-  gap: 0.5rem;
-  max-width: 92%;
-  padding: 0.6rem 0.7rem;
-  border: 1px solid rgba(160, 216, 211, 0.1);
-  border-radius: 0.55rem 0.55rem 0.55rem 0.15rem;
-  background: rgba(22, 52, 61, 0.68);
-  font-size: 0.78rem;
-  line-height: 1.45;
-  white-space: pre-wrap;
-}
-.rf-ai-message-user {
-  align-self: flex-end;
-  border-radius: 0.55rem 0.55rem 0.15rem 0.55rem;
-  border-color: rgba(240, 138, 75, 0.22);
-  background: rgba(211, 93, 50, 0.18);
-}
-.rf-ai-composer {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  border-top: 1px solid var(--border);
-}
-.rf-ai-composer textarea { min-height: 3.25rem; resize: none; font-size: 0.78rem; }
-.rf-ai-composer button { flex: 0 0 auto; }
-@keyframes rf-ai-in {
-  from { opacity: 0; transform: translateY(10px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes rf-ai-pulse {
-  0%, 100% { box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(240, 138, 75, 0.25); }
-  50% { box-shadow: 0 14px 36px rgba(0, 0, 0, 0.4), 0 0 0 5px rgba(240, 138, 75, 0.08); }
-}
-@media (max-width: 480px) {
-  .rf-ai-assistant { right: 0.75rem; bottom: 0.75rem; }
-  .rf-ai-launcher span { display: none; }
-  .rf-ai-launcher { width: 2.75rem; padding: 0; }
-}
-
-/* Photo-led landing atmosphere; the app itself keeps its command-center theme. */
-.rf-landing {
-  --background: #0a1628;
-  --foreground: #e8f0f5;
-  --card: rgba(15, 35, 50, 0.88);
-  --card-foreground: #e8f0f5;
-  --popover: #0f2332;
-  --popover-foreground: #e8f0f5;
-  --primary: #e04a3a;
-  --primary-foreground: #ffffff;
-  --secondary: #1a3a4a;
-  --secondary-foreground: #dce8ed;
-  --muted: #153040;
-  --muted-foreground: #8aa0a8;
-  --accent: #1d4555;
-  --accent-foreground: #e8f0f5;
-  --border: rgba(160, 200, 210, 0.16);
-  --input: rgba(160, 200, 210, 0.18);
-  --ring: #e04a3a;
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  background: var(--background);
-}
-
-.rf-visual-field,
-.rf-grain {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-}
-
-.rf-visual-field { z-index: -2; background: #07141b; }
-.rf-visual-field::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(120deg, rgba(7, 20, 27, 0.94) 0%, rgba(7, 20, 27, 0.72) 42%, rgba(4, 10, 14, 0.34) 100%);
-}
-.rf-visual-panel {
-  position: absolute;
-  inset: -4%;
-  background-position: center;
-  background-size: cover;
-  opacity: 0;
-  animation: rf-incident-photo 30s ease-in-out infinite;
-  filter: saturate(0.8) contrast(0.92);
-}
-.rf-visual-panel::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, rgba(7,20,27,0.35), transparent 65%);
-}
-.rf-visual-panel span {
-  position: absolute;
-  right: 9vw;
-  bottom: 15vh;
-  color: rgba(255, 255, 255, 0.72);
-  font: 600 0.65rem/1 var(--font-geist-mono), monospace;
-  letter-spacing: 0.18em;
-}
-.rf-visual-flood {
-  background-image: url('https://images.unsplash.com/photo-1547683905-f686c2a8830a?auto=format&fit=crop&w=2200&q=78');
-}
-.rf-visual-quake {
-  background-image: url('https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=2200&q=78');
-  animation-delay: 6s;
-}
-.rf-visual-road {
-  background-image: url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=2200&q=78');
-  animation-delay: 12s;
-}
-.rf-grain {
-  z-index: -1;
-  opacity: 0.12;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
-  mix-blend-mode: multiply;
-}
-.rf-signal-grid {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.22;
-  background-image:
-    linear-gradient(rgba(160, 200, 210, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(160, 200, 210, 0.08) 1px, transparent 1px);
-  background-size: 72px 72px;
-  mask-image: linear-gradient(90deg, black, transparent 72%);
-  animation: rf-grid-drift 24s linear infinite;
-}
-.rf-signal-grid::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 8%;
-  width: 1px;
-  background: linear-gradient(transparent, rgba(224, 74, 58, 0.8), transparent);
-  animation: rf-signal-sweep 9s ease-in-out infinite;
-}
-.rf-reveal {
-  animation: rf-reveal 0.8s cubic-bezier(0.2, 0.75, 0.25, 1) both;
-}
-.rf-reveal-delay-1 { animation-delay: 0.14s; }
-.rf-workflow-step {
-  animation: rf-step-in 0.5s ease-out both;
-}
-.rf-workflow-step:nth-child(2) { animation-delay: 0.04s; }
-.rf-workflow-step:nth-child(3) { animation-delay: 0.08s; }
-.rf-workflow-step:nth-child(4) { animation-delay: 0.12s; }
-.rf-workflow-step:nth-child(5) { animation-delay: 0.16s; }
-.rf-workflow-step:nth-child(6) { animation-delay: 0.20s; }
-.rf-workflow-step:nth-child(7) { animation-delay: 0.24s; }
-.rf-workflow-step:nth-child(8) { animation-delay: 0.28s; }
-.rf-workflow-step:nth-child(9) { animation-delay: 0.32s; }
-.rf-workflow-step:nth-child(10) { animation-delay: 0.36s; }
-.rf-workflow-step:nth-child(11) { animation-delay: 0.40s; }
-.rf-workflow-step:nth-child(12) { animation-delay: 0.44s; }
-.rf-workflow-step:nth-child(13) { animation-delay: 0.48s; }
-.rf-feature-card {
-  overflow: hidden;
-  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
-}
-.rf-feature-image {
-  height: 92px;
-  background-position: center;
-  background-size: cover;
-  filter: saturate(0.72) contrast(1.05);
-  opacity: 0.82;
-  transition: transform 500ms ease, opacity 220ms ease;
-}
-.rf-feature-image::after {
-  content: "";
-  display: block;
-  height: 100%;
-  background: linear-gradient(180deg, transparent 10%, rgba(12, 31, 40, 0.92) 100%);
-}
-.rf-feature-card:nth-child(3n + 1) .rf-feature-image {
-  background-image: url('https://images.unsplash.com/photo-1547683905-f686c2a8830a?auto=format&fit=crop&w=900&q=70');
-}
-.rf-feature-card:nth-child(3n + 2) .rf-feature-image {
-  background-image: url('https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=900&q=70');
-}
-.rf-feature-card:nth-child(3n) .rf-feature-image {
-  background-image: url('https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=900&q=70');
-}
-.rf-feature-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(224, 74, 58, 0.45);
-  box-shadow: 0 16px 32px rgba(23, 43, 53, 0.1);
-}
-.rf-feature-card:hover .rf-feature-image { transform: scale(1.06); opacity: 1; }
-
-@keyframes rf-grid-drift {
-  to { background-position: 72px 72px; }
-}
-@keyframes rf-signal-sweep {
-  0%, 100% { transform: translateY(-10%); opacity: 0; }
-  18%, 78% { opacity: 1; }
-  92% { transform: translateY(110%); opacity: 0; }
-}
-@keyframes rf-reveal {
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes rf-step-in {
-  from { opacity: 0; transform: translateX(8px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.rf-app-shell { position: relative; isolation: isolate; }
-.rf-app-shell::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.3;
-  background: repeating-linear-gradient(115deg, transparent 0 110px, oklch(0.65 0.22 25 / 0.025) 110px 111px);
-  animation: rf-app-drift 30s linear infinite;
-}
-.rf-app-main > div { animation: rf-reveal 0.55s ease-out both; }
-@keyframes rf-app-drift {
-  to { background-position: 160px 0; }
-}
-
-@keyframes rf-incident-photo {
-  0%, 7% { opacity: 0; transform: scale(1); }
-  12%, 26% { opacity: 1; transform: scale(1.04); }
-  33%, 100% { opacity: 0; transform: scale(1.08); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .rf-visual-panel,
-  .rf-signal-grid,
-  .rf-reveal,
-  .rf-workflow-step,
-  .rf-app-shell::before,
-  .rf-app-main > div { animation: none; }
-  .rf-visual-panel:first-child { opacity: 1; }
 }
 
 /* ─── Disaster theme animations ────────────────────────────────────────── */

@@ -8,7 +8,7 @@ import { apiGet, apiPatch, apiPost } from '@/lib/api-client'
 import { toast } from 'sonner'
 import {
   ShieldAlert, LayoutDashboard, Map, Package, CheckSquare, FlaskConical,
-    BarChart3, ScrollText, Settings, LogOut, Bell, Plus, Search, RadioTower,
+  BarChart3, ScrollText, Settings, LogOut, Bell, Plus, Search, RadioTower,
   AlertTriangle, Menu, X, Activity, ChevronRight, Brain, LifeBuoy, Users, HandHeart,
   MessageCircle,
 } from 'lucide-react'
@@ -24,7 +24,6 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { Notification, Incident } from '@/lib/types'
 import { NotificationTypeBadge } from '@/components/shared/badges'
-import { Footer } from '@/components/shared/footer'
 
 interface NavItem {
   label: string
@@ -46,7 +45,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Audit Logs', path: '/audit', icon: ScrollText, roles: ['ADMIN'] },
   { label: 'Volunteer Mgmt', path: '/volunteer-management', icon: HandHeart, roles: ['DISASTER_OFFICER', 'ADMIN'] },
   { label: 'Volunteer Map', path: '/volunteer-map', icon: Map, roles: ['DISASTER_OFFICER', 'ADMIN'] },
-    { label: 'Settings', path: '/settings', icon: Settings, roles: ['ADMIN', 'DISASTER_OFFICER', 'RESPONDER'] },
+  { label: 'Settings', path: '/settings', icon: Settings, roles: ['ADMIN', 'DISASTER_OFFICER', 'RESPONDER'] },
   // Emergency communication chat — available to every role
   { label: 'Chat', path: '/chat', icon: MessageCircle, roles: ['CITIZEN', 'RESPONDER', 'DISASTER_OFFICER', 'ADMIN'] },
   // Citizen
@@ -61,7 +60,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
   const { path, navigate } = useRouter()
   const connected = useRealtimeConnection()
-    const [notifications, setNotifications] = useState<Notification[]>([])
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [chatUnread, setChatUnread] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -92,7 +91,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     return () => { cancelled = true; clearInterval(interval) }
   }, [])
 
-    const loadChatUnread = async () => {
+  const loadChatUnread = async () => {
     try {
       const res = await apiGet<{ unreadCount: number }>('/api/chat/unread')
       setChatUnread(res.unreadCount)
@@ -132,21 +131,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const initials = user ? user.name.split(' ').map((s) => s[0]).join('').slice(0, 2).toUpperCase() : 'U'
 
   return (
-    <div className="rf-app-shell min-h-screen flex flex-col bg-background text-foreground">
-      {/* Demo mode banner */}
-      <div className="rf-demo-banner px-3 py-1.5 text-center">
-        <span className="text-[10px] font-mono text-primary font-medium">
-          DEMO MODE — Sample data for presentation purposes
-        </span>
-      </div>
-
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Top bar */}
-      <header className="sticky top-0 z-40 border-b border-border bg-card/90 backdrop-blur-md supports-[backdrop-filter]:bg-card/70">
-        <div className="flex h-12 items-center gap-2 px-3 md:px-4">
+      <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+        <div className="flex h-14 items-center gap-3 px-3 md:px-5">
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden h-9 w-9"
+            className="md:hidden"
             onClick={() => setSidebarOpen((v) => !v)}
             aria-label="Toggle sidebar"
           >
@@ -154,14 +146,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </Button>
           <button
             onClick={() => navigate(user?.role === 'CITIZEN' ? '/citizen-dashboard' : '/command-center')}
-            className="flex items-center gap-2.5 rf-focus-ring rounded-md px-1 py-1"
+            className="flex items-center gap-2"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
               <RadioTower className="h-4 w-4" />
             </div>
             <div className="hidden sm:flex flex-col items-start leading-none">
-              <span className="text-sm font-bold tracking-tight">RESOURCEFLOW AI</span>
-              <span className="text-[10px] text-muted-foreground font-medium">Emergency Operations</span>
+              <span className="text-xs font-bold tracking-wide">RESOURCEFLOW AI</span>
+              <span className="text-[10px] text-muted-foreground font-mono">Disaster Coordination</span>
             </div>
           </button>
 
@@ -170,7 +162,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <Button
               size="sm"
               variant="default"
-              className="ml-2 hidden md:inline-flex gap-1.5 h-8"
+              className="ml-2 hidden md:inline-flex gap-1.5"
               onClick={async () => {
                 toast.loading('Running full end-to-end demo…', { id: 'demo' })
                 try {
@@ -190,12 +182,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </Button>
           )}
 
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex items-center gap-2">
             {/* Realtime status */}
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 border border-border/50">
-              <span className={cn('h-2 w-2 rounded-full', connected ? 'bg-emerald-500' : 'bg-red-500 animate-pulse')} />
-              <span className="text-[10px] font-medium text-muted-foreground">
-                {connected ? 'LIVE' : 'RECONNECTING'}
+            <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/60">
+              <span className={cn('h-2 w-2 rounded-full', connected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500')} />
+              <span className="text-[10px] font-mono text-muted-foreground">
+                {connected ? 'LIVE' : 'RECONNECT'}
               </span>
             </div>
 
@@ -278,28 +270,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         {/* Sidebar */}
         <aside
           className={cn(
-            'w-60 shrink-0 border-r border-border bg-sidebar text-sidebar-foreground flex flex-col',
+            'w-56 shrink-0 border-r border-border bg-sidebar text-sidebar-foreground flex flex-col',
             'md:flex',
             sidebarOpen ? 'flex' : 'hidden md:flex'
           )}
         >
-          {/* User info */}
-          <div className="p-3 border-b border-border">
-            <div className="flex items-center gap-2.5">
-              <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-primary/20 text-primary text-xs font-bold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user?.name}</p>
-                <p className="text-[10px] text-muted-foreground font-mono uppercase">
-                  {user?.role.replace(/_/g, ' ')}
-                </p>
-              </div>
-            </div>
-          </div>
-
           <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto rf-scroll">
             {allowed.map((item) => {
               const Icon = item.icon
@@ -313,10 +288,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     setSidebarOpen(false)
                   }}
                   className={cn(
-                    'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all rf-focus-ring',
+                    'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm transition-colors',
                     active
-                      ? 'bg-primary text-primary-foreground font-medium shadow-sm'
-                      : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+                      ? 'bg-primary/15 text-primary font-medium'
+                      : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground'
                   )}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
@@ -326,30 +301,28 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                       {chatUnread > 9 ? '9+' : chatUnread}
                     </Badge>
                   )}
-                  {active && <ChevronRight className="h-3.5 w-3.5 ml-auto opacity-70" />}
+                  {active && <ChevronRight className="h-3 w-3 ml-auto" />}
                 </button>
               )
             })}
           </nav>
-
-          <div className="p-3 border-t border-border">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive"
-              onClick={handleLogout}
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
+          <div className="p-3 border-t border-border text-[10px] text-muted-foreground font-mono">
+            v1.0 · Hackathon build
           </div>
         </aside>
 
         {/* Main content */}
-        <main className="rf-app-main flex-1 min-w-0 overflow-y-auto rf-scroll bg-background">
-          <div className="min-h-full p-4 md:p-6">{children}</div>
-          {/* Footer */}
-          <Footer />
+        <main className="flex-1 min-w-0 overflow-y-auto rf-scroll">
+          <div className="min-h-full">{children}</div>
+          {/* Sticky footer */}
+          <footer className="mt-auto border-t border-border bg-card/50 px-4 py-3 text-[11px] text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span>
+                RESOURCEFLOW AI · Prototype decision-support score — not a medically or scientifically validated model.
+              </span>
+              <span className="font-mono">All actions persisted · Audit trail enabled</span>
+            </div>
+          </footer>
         </main>
       </div>
     </div>
