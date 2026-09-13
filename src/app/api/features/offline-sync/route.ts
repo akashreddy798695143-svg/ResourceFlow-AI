@@ -80,11 +80,11 @@ export async function POST(req: NextRequest) {
 
     const imageMetaJson = imageMeta
       ? JSON.stringify({
-          filename: String(imageMeta.filename || 'upload'),
-          size: Number(imageMeta.size || 0),
-          contentType: String(imageMeta.contentType || ''),
-          idempotencyKey: idempToken,
-        })
+        filename: String(imageMeta.filename || 'upload'),
+        size: Number(imageMeta.size || 0),
+        contentType: String(imageMeta.contentType || ''),
+        idempotencyKey: idempToken,
+      })
       : JSON.stringify({ idempotencyKey: idempToken })
 
     const year = new Date().getFullYear()
@@ -116,8 +116,8 @@ export async function POST(req: NextRequest) {
 
     // Reuse the same call to run the workflow that /api/incidents does, but fire-and-forget.
     import('@/lib/workflows/incident-workflow').then(({ runIncidentWorkflow }) => {
-      runIncidentWorkflow(newIncident.id).catch(() => {})
-    }).catch(() => {})
+      runIncidentWorkflow(newIncident.id).catch(() => { })
+    }).catch(() => { })
 
     return ok(
       {

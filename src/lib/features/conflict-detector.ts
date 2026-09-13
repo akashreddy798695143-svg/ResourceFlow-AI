@@ -121,16 +121,16 @@ export async function detectResourceConflicts(): Promise<{
         distanceKm:
           a.Incident.latitude != null && r.latitude != null
             ? Number(
-                haversineKm(r.latitude, r.longitude, a.Incident.latitude, a.Incident.longitude).toFixed(2),
-              )
+              haversineKm(r.latitude, r.longitude, a.Incident.latitude, a.Incident.longitude).toFixed(2),
+            )
             : null,
         destination:
           a.Incident.resourceDestinationLatitude != null && a.Incident.resourceDestinationLongitude != null
             ? {
-                lat: a.Incident.resourceDestinationLatitude,
-                lng: a.Incident.resourceDestinationLongitude,
-                name: a.Incident.resourceDestinationName ?? null,
-              }
+              lat: a.Incident.resourceDestinationLatitude,
+              lng: a.Incident.resourceDestinationLongitude,
+              name: a.Incident.resourceDestinationName ?? null,
+            }
             : null,
         assignedAt: a.assignedAt.toISOString(),
       }))

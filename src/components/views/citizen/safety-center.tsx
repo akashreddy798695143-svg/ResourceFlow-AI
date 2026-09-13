@@ -12,7 +12,7 @@ import { toast } from 'sonner'
 import {
   Siren, HeartPulse, Users, MapPinOff, ShieldCheck, CloudRain, Droplets,
   Package, Home, BellRing, HandHeart, Accessibility, Languages, WifiOff,
-  Loader2, Phone, Trash2, Volume2, RefreshCw, Flame, AlertTriangle, Zap, Mail,
+  Loader2, Phone, Trash2, Volume2, RefreshCw, Flame, AlertTriangle, Zap, Mail, MapPin,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,7 +24,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { UI_STRINGS, speak, type LanguageCode } from '@/lib/services/citizen-safety-service'
 import { useAuth } from '@/lib/use-auth'
+import dynamic from 'next/dynamic'
 import { cn } from '@/lib/utils'
+
+const NearbyHelpSection = dynamic(
+  () => import('@/components/features/nearby-help').then((m) => m.NearbyHelpSection),
+  { ssr: false, loading: () => <div className="p-6 text-xs text-muted-foreground">Loading Nearby Help…</div> }
+)
 
 // ─── Small shared pieces ─────────────────────────────────────────────────────
 
@@ -958,6 +964,7 @@ export function CitizenSafetyCenterView() {
       <Tabs defaultValue="sos">
         <TabsList className="flex flex-wrap items-center gap-0.5 overflow-x-auto">
           <TabsTrigger value="sos"><Siren className="h-4 w-4" />{t.sosTitle}</TabsTrigger>
+          <TabsTrigger value="nearby"><MapPin className="h-4 w-4" />Nearby Help</TabsTrigger>
           <TabsTrigger value="circle"><ShieldCheck className="h-4 w-4" />{t.safetyCircle}</TabsTrigger>
           <TabsTrigger value="hazards"><MapPinOff className="h-4 w-4" />{t.hazardMap}</TabsTrigger>
           <TabsTrigger value="relief"><Package className="h-4 w-4" />{t.relief}</TabsTrigger>
@@ -968,6 +975,7 @@ export function CitizenSafetyCenterView() {
         </TabsList>
 
         <TabsContent value="sos" className="space-y-3"><SosSection lang={lang} big={big} /></TabsContent>
+        <TabsContent value="nearby" className="space-y-3"><NearbyHelpSection big={big} /></TabsContent>
         <TabsContent value="circle" className="space-y-3"><CircleSection lang={lang} big={big} /></TabsContent>
         <TabsContent value="hazards" className="space-y-3"><HazardSection lang={lang} big={big} /></TabsContent>
         <TabsContent value="relief" className="space-y-3"><ReliefSection big={big} /></TabsContent>

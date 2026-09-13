@@ -8,10 +8,15 @@ import { apiGet } from '@/lib/api-client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, AlertTriangle, MapPin, Navigation, Play, Pause, ArrowDown } from 'lucide-react'
+import { Loader2, AlertTriangle, MapPin, Navigation, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Incident, Resource } from '@/lib/types'
 import { haversineKm } from '@/lib/agents/resource-agent'
+
+const LiveNavigation = dynamic(
+  () => import('@/components/features/live-navigation').then((m) => m.LiveNavigation),
+  { ssr: false }
+)
 
 const ResourceTrackerMap = dynamic(
   () => import('@/components/shared/resource-tracker-map'),
@@ -46,7 +51,7 @@ export function RescueRouteCard({
   const [summary, setSummary] = useState<RouteSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [live, setLive] = useState(false)
+  const [navOpen, setNavOpen] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -151,12 +156,12 @@ export function RescueRouteCard({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
               <Button
                 size="sm"
-                variant={live ? 'default' : 'outline'}
-                onClick={() => setLive((v) => !v)}
-                className={cn('gap-1.5', live && 'bg-primary text-primary-foreground')}
+                variant={navOpen ? 'default' : 'outline'}
+                onClick={() => setNavOpen(true)}
+                className={cn('gap-1.5', navOpen && 'bg-primary text-primary-foreground')}
               >
-                {live ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                {live ? 'GO LIVE' : 'GO LIVE / NAVIGATE'}
+                <Navigation className="h-3.5 w-3.5" />
+                {navOpen ? '🔴 LIVE TRACKING' : 'GO LIVE / NAVIGATE'}
               </Button>
               <div className={cn('rounded-md border px-2.5 py-1.5 text-xs text-center', summary.routeStatus === 'OK' ? 'border-sev-LOW/30 bg-sev-LOW/10 text-sev-LOW' : 'border-sev-CRITICAL/30 bg-sev-CRITICAL/10 text-sev-CRITICAL')}>
                 ROUTE STATUS: {summary.routeStatus === 'OK' ? 'OK' : 'RISK'}
@@ -179,6 +184,14 @@ export function RescueRouteCard({
           </>
         )}
       </CardContent>
+      {navOpen && (
+        <LiveNavigation
+          incident={effectiveIncident}
+          resource={effectiveResource}
+          onClose={() => setNavOpen(false)}
+          onConfirmArrival={onConfirmArrival}
+        />
+      )}
     </Card>
   )
 }

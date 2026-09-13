@@ -9,6 +9,7 @@
 import { db } from '@/lib/db'
 import { detectResourceConflicts } from '@/lib/features/conflict-detector'
 import { findNearestHelp } from '@/lib/features/nearest-help'
+import { searchNearbyPlaces } from '@/lib/features/nearby-places'
 import { detectMissingInformationForIncidentId, summarizeForCitizen } from '@/lib/features/missing-info-detector'
 import { buildRouteForAssignment } from '@/lib/features/rescue-route'
 
@@ -74,6 +75,26 @@ export async function buildChatbotContext(role: string, userId: string): Promise
             )
           }
         }
+
+        // Real-time nearby emergency places (OpenStreetMap Overpass) around the
+        // citizen's incident location — used to answer "I need a hospital" etc.
+        try {
+          const result = await searchNearbyPlaces({ lat: own.latitude, lng: own.longitude, radius: 8000, limit: 8 })
+          const pls = result.places
+          if (result.unavailable) {
+            out.push('CITIZEN NEARBY PLACES: live place search unavailable right now.')
+          } else if (pls.length === 0) {
+            out.push('CITIZEN NEARBY PLACES: no OpenStreetMap emergency places found nearby.')
+          } else {
+            out.push('CITIZEN NEARBY PLACES (real OpenStreetMap data; use these names/addresses only):')
+            for (const p of pls) {
+              out.push(`  - ${p.categoryLabel}: ${p.name} — ${p.distanceKm} km${p.address ? `, ${p.address}` : ''}${p.phone ? `, phone ${p.phone}` : ', phone unavailable'}`)
+            }
+            out.push('When the citizen asks for hospitals/shelters/pharmacies, recommend from this list and point them to the Safety Center → Nearby Help tab for directions. Never invent place names.')
+          }
+        } catch {
+          out.push('CITIZEN NEARBY PLACES: live place search unavailable right now.')
+        }
       } else {
         out.push('CITIZEN has no active incident on record.')
       }
@@ -102,8 +123,7 @@ export async function buildChatbotContext(role: string, userId: string): Promise
           out.push(`ROUTE STATUS for ${a.Incident.incidentCode} ← ${a.Resource.resourceCode}: DATA UNAVAILABLE`)
         } else {
           out.push(
-            `ROUTE STATUS for ${a.Incident.incidentCode} ← ${a.Resource.resourceCode}: ${r.routeStatus} · distance ${r.distanceKm.toFixed(2)} km · ETA ~${r.etaMinutes} min · currentSource=${r.currentLocation.source} · destinationSource=${r.destination.source}${
-              r.risks.length ? ` · risks=${r.risks.join('; ')}` : ''
+            `ROUTE STATUS for ${a.Incident.incidentCode} ← ${a.Resource.resourceCode}: ${r.routeStatus} · distance ${r.distanceKm.toFixed(2)} km · ETA ~${r.etaMinutes} min · currentSource=${r.currentLocation.source} · destinationSource=${r.destination.source}${r.risks.length ? ` · risks=${r.risks.join('; ')}` : ''
             }`,
           )
         }

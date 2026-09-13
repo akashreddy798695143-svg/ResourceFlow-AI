@@ -663,6 +663,7 @@ model Resource {
   ResourceAssignment     ResourceAssignment[]
   resourceTrackingEvents ResourceTrackingEvent[]
   resourceDestinations   ResourceDestination[]
+  locationUpdates        ResponderLocationUpdate[]
 
   @@index([status])
   @@index([type])
@@ -938,6 +939,26 @@ model VolunteerLocationUpdate {
   volunteer   VolunteerRegistration @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
 
   @@index([volunteerId, timestamp])
+}
+
+// Live responder GPS location updates (Go Live navigation).
+// Only written with explicit consent via the responder's Go Live tracking;
+// readable only by RESPONDER (own resource) / DISASTER_OFFICER / ADMIN.
+model ResponderLocationUpdate {
+  id           String   @id @default(cuid())
+  resourceId   String
+  incidentId   String?
+  latitude     Float
+  longitude    Float
+  accuracy     Float?
+  speedKph     Float?
+  heading      Float?
+  recordedById String?
+  timestamp    DateTime @default(now())
+  Resource     Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId, timestamp])
+  @@index([incidentId, timestamp])
 }
 
 model WhatIfRun {

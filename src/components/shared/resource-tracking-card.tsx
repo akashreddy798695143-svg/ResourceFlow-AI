@@ -3,12 +3,18 @@
 import { Fragment, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Navigation, CheckCircle2, Play, Pause, Map } from 'lucide-react'
+import { Navigation, CheckCircle2, Play, Pause, Map, Radio } from 'lucide-react'
 import { ResourceStatusBadge } from '@/components/shared/badges'
 import dynamic from 'next/dynamic'
 import type { Incident, Resource, ResourceStatus } from '@/lib/types'
 import { haversineKm } from '@/lib/agents/resource-agent'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/lib/use-auth'
+
+const LiveNavigation = dynamic(
+  () => import('@/components/features/live-navigation').then((m) => m.LiveNavigation),
+  { ssr: false }
+)
 
 const ResourceTrackerMap = dynamic(
   () => import('@/components/shared/resource-tracker-map'),
@@ -45,7 +51,9 @@ export function ResourceTrackingCard({
 }) {
   const assigned = incident.assignedResourceId ? resources.find((r) => r.id === incident.assignedResourceId) : null
   const hasDest = incident.resourceDestinationLatitude != null && incident.resourceDestinationLongitude != null
-  const [live, setLive] = useState(false)
+  const [navOpen, setNavOpen] = useState(false)
+  const { user } = useAuth()
+  const officerView = user?.role === 'DISASTER_OFFICER' || user?.role === 'ADMIN'
 
   let distanceKm: number | null = null
   let etaMin: number | null = null
@@ -91,13 +99,13 @@ export function ResourceTrackingCard({
               </div>
               <Button
                 size="sm"
-                variant={live ? 'default' : 'outline'}
-                onClick={() => setLive((v) => !v)}
-                className={cn('shrink-0', live ? 'bg-primary text-primary-foreground' : '')}
+                variant={navOpen ? 'default' : 'outline'}
+                onClick={() => setNavOpen(true)}
+                className={cn('shrink-0', navOpen ? 'bg-primary text-primary-foreground' : '')}
               >
-                {live ? <Pause className="h-3.5 w-3.5 sm:mr-1" /> : <Play className="h-3.5 w-3.5 sm:mr-1" />}
-                <span className="hidden sm:inline">{live ? 'GO LIVE' : 'GO LIVE / NAVIGATE'}</span>
-                <span className="sm:hidden">{live ? 'Live' : 'Go Live'}</span>
+                {navOpen ? <Radio className="h-3.5 w-3.5 sm:mr-1 animate-pulse" /> : <Play className="h-3.5 w-3.5 sm:mr-1" />}
+                <span className="hidden sm:inline">{navOpen ? '🔴 LIVE TRACKING' : 'GO LIVE'}</span>
+                <span className="sm:hidden">{navOpen ? 'LIVE' : 'GO LIVE'}</span>
               </Button>
             </div>
 
@@ -109,7 +117,7 @@ export function ResourceTrackingCard({
               </div>
             )}
 
-            {live && live && (
+            {navOpen && (
               <div className="border border-border rounded-md overflow-hidden h-56">
                 <ResourceTrackerMap resource={assigned} incident={incident} distanceKm={distanceKm} etaMin={etaMin} />
               </div>
@@ -133,6 +141,15 @@ export function ResourceTrackingCard({
           <p className="text-xs text-muted-foreground">No resource assigned yet. Assign a resource to enable tracking.</p>
         )}
       </CardContent>
+      {navOpen && assigned && (
+        <LiveNavigation
+          incident={incident}
+          resource={assigned}
+          onClose={() => setNavOpen(false)}
+          onConfirmArrival={onConfirmArrival}
+          officerMode={officerView}
+        />
+      )}
     </Card>
   )
 }
