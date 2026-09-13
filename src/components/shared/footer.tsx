@@ -88,11 +88,13 @@ export function Footer() {
           <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
             <button onClick={() => navigate('/privacy')} className="hover:text-foreground transition">Privacy Policy</button>
             <span className="text-border">|</span>
-            <button onClick={() => navigate('/terms')} className="hover:text-foreground transition">Terms & Conditions</button>
+            <button onClick={() => navigate('/terms')} className="hover:text-foreground transition">Terms &amp; Conditions</button>
             <span className="text-border">|</span>
             <button onClick={() => navigate('/safety')} className="hover:text-foreground transition">Safety</button>
             <span className="text-border">|</span>
             <button onClick={() => navigate('/contact')} className="hover:text-foreground transition">Contact</button>
+            <span className="text-border">|</span>
+            <button onClick={() => navigate('/about')} className="hover:text-foreground transition">About</button>
           </div>
         </div>
       </div>

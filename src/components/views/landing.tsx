@@ -9,8 +9,12 @@ import {
   Shield, ArrowRight, Map, Eye, CheckCircle2, Zap, GitBranch, FileText, Lock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Footer } from '@/components/shared/footer'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+
+import { ThemeToggle } from '@/components/shared/theme-toggle'
+import { HeroBackgroundSlideshow } from './hero-slideshow'
 
 export function LandingView() {
   const { navigate } = useRouter()
@@ -32,88 +36,165 @@ export function LandingView() {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Nav */}
-      <header className="sticky top-0 z-30 border-b border-border bg-card/70 backdrop-blur">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <RadioTower className="h-4 w-4" />
+      <header className="sticky top-0 z-30 border-b border-border bg-card/85 backdrop-blur-md supports-[backdrop-filter]:bg-card/75">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-15 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/20">
+              <RadioTower className="h-5 w-5" />
             </div>
             <div className="flex flex-col leading-none">
-              <span className="text-sm font-bold tracking-wide">RESOURCEFLOW AI</span>
+              <span className="text-sm font-bold tracking-wider">RESOURCEFLOW AI</span>
               <span className="text-[10px] text-muted-foreground font-mono">Autonomous Disaster Coordination</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>Sign in</Button>
-            <Button size="sm" onClick={() => navigate('/register')}>Get Started</Button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <ThemeToggle size="sm" />
+            <Button variant="ghost" size="sm" onClick={() => navigate('/login')} className="text-xs font-medium">
+              Sign in
+            </Button>
+            <Button size="sm" onClick={() => navigate('/register')} className="text-xs font-medium shadow-sm">
+              Get Started
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border">
-        <div className="absolute inset-0 opacity-20" style={{
-          backgroundImage: 'radial-gradient(circle at 20% 20%, var(--color-primary) 0%, transparent 40%), radial-gradient(circle at 80% 60%, var(--color-chart-5) 0%, transparent 40%)'
-        }} />
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <Badge variant="outline" className="mb-4 gap-1.5 text-primary border-primary/40">
-                <Activity className="h-3 w-3" />
-                AI-Assisted · Real-time · Explainable
-              </Badge>
-              <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-[1.05]">
-                RESOURCEFLOW <span className="text-primary">AI</span>
-              </h1>
-              <p className="mt-6 text-lg md:text-xl text-muted-foreground">
-                From Emergency Signals to Coordinated Action.
+      {/* Hero Banner with 20-Image Automatic Disaster Background Slideshow */}
+      <section className="relative overflow-hidden border-b border-border min-h-[580px] lg:min-h-[640px] flex items-center">
+        {/* Background Disaster Response Slideshow with Ken-Burns Motion & Scrim Overlay */}
+        <HeroBackgroundSlideshow />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20 w-full z-10">
+          <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+            {/* Left Column: Hero Typography and Action Triggers */}
+            <div className="lg:col-span-7 space-y-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/25 border border-amber-400/50 text-amber-200 text-xs font-bold tracking-wide backdrop-blur-xs">
+                <Activity className="h-3.5 w-3.5 animate-pulse text-amber-400" />
+                <span className="rf-hero-text">AI-POWERED DISASTER RESPONSE · REAL-TIME COORDINATION</span>
+              </div>
+
+              <div>
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.08] text-white rf-hero-text drop-shadow-md">
+                  RESOURCEFLOW <span className="text-amber-400">AI</span>
+                </h1>
+                <p className="mt-3 text-xl sm:text-2xl font-bold text-white tracking-tight rf-hero-text drop-shadow-sm">
+                  From Emergency Signals to Coordinated Action.
+                </p>
+              </div>
+
+              <p className="text-sm sm:text-base text-slate-100 leading-relaxed max-w-2xl font-semibold rf-hero-text">
+                A mission-critical disaster management platform that converts unstructured crisis reports into an explainable,
+                audited response workflow — from citizen alerts through AI triage, hazard risk scoring, multi-agency resource optimization,
+                human officer approval, and live responder dispatch.
               </p>
-              <p className="mt-3 text-sm text-muted-foreground/80 max-w-xl">
-                A disaster-response coordination platform that converts emergency reports into an explainable, automated response workflow —
-                from citizen report through AI analysis, risk scoring, resource optimization, human approval, adaptive reassignment, escalation and resolution.
-              </p>
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Button size="lg" className="gap-2" onClick={seedAndLogin} disabled={seeding}>
-                  <Zap className="h-4 w-4" />
-                  {seeding ? 'Preparing demo…' : 'Run Live Demo'}
+
+              {/* Action Buttons: Emergency Reporting, Command Center, Live Demo */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <Button
+                  size="lg"
+                  className="gap-2 bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30 font-bold text-sm h-11 px-5 tracking-wide"
+                  onClick={() => navigate('/report-incident')}
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  Report Emergency
                 </Button>
-                <Button size="lg" variant="outline" className="gap-2" onClick={() => navigate('/register')}>
-                  Create Account
-                  <ArrowRight className="h-4 w-4" />
+
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="gap-2 font-bold text-sm h-11 px-5 bg-slate-900/60 hover:bg-slate-800/80 text-white border-white/30 backdrop-blur-xs shadow-sm tracking-wide rf-hero-text"
+                  onClick={() => navigate('/command-center')}
+                >
+                  <RadioTower className="h-4 w-4 text-amber-400" />
+                  Command Center
+                </Button>
+
+                <Button
+                  size="lg"
+                  className="gap-2 font-bold text-sm h-11 px-5 bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md shadow-amber-500/20 tracking-wide"
+                  onClick={seedAndLogin}
+                  disabled={seeding}
+                >
+                  <Zap className="h-4 w-4 text-slate-950" />
+                  {seeding ? 'Preparing Demo…' : 'Run Live Demo'}
                 </Button>
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">
-                Demo accounts: <span className="font-mono text-foreground">admin@ / officer@ / responder@ / citizen@resourceflow.ai</span> · password <span className="font-mono text-foreground">demo1234</span>
-              </p>
+
+              {/* Operational capability badges */}
+              <div className="pt-2 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-white font-mono font-bold">
+                <span className="flex items-center gap-1.5 rf-hero-text">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                  Sub-second Hazard Triage
+                </span>
+                <span className="flex items-center gap-1.5 rf-hero-text">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                  Conflict-Free Resource Allocation
+                </span>
+                <span className="flex items-center gap-1.5 rf-hero-text">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                  Zero-Data-Loss Offline Sync
+                </span>
+              </div>
+
             </div>
 
-            {/* Workflow visual */}
-            <div className="relative">
-              <Card className="bg-card/60 backdrop-blur border-border">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-mono text-muted-foreground">CORE WORKFLOW</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1.5">
+            {/* Right Column: Workflow Telemetry Visual */}
+            <div className="lg:col-span-5 relative">
+              <div
+                className="rounded-xl overflow-hidden shadow-2xl shadow-black/50 transition-all border"
+                style={{
+                  background: 'rgba(5, 12, 24, 0.78)',
+                  borderColor: 'rgba(255, 255, 255, 0.14)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                }}
+              >
+                <div
+                  className="p-3.5 border-b flex items-center justify-between"
+                  style={{
+                    borderColor: 'rgba(255, 255, 255, 0.10)',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                  }}
+                >
+                  <div className="text-xs font-mono tracking-wider uppercase flex items-center gap-2 text-white font-bold">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                    CORE DISASTER WORKFLOW
+                  </div>
+                  <Badge variant="outline" className="text-[10px] font-mono font-bold text-amber-300 border-amber-400/50 bg-amber-500/20">
+                    LIVE PIPELINE
+                  </Badge>
+                </div>
+                <div className="p-3.5 space-y-1.5 font-mono text-xs">
                   {[
-                    'REPORT', 'AI UNDERSTANDS', 'INCIDENTS FUSED',
-                    'RISK CHANGES', 'RESOURCES OPTIMIZED', 'HUMAN APPROVES',
-                    'AUTOMATION EXECUTES', 'LIVE SYSTEM MONITORS',
-                    'FAILURE DETECTED', 'RESPONSE ADAPTS',
-                    'ESCALATION OCCURS', 'INCIDENT RESOLVED',
-                    'SYSTEM GENERATES REPORT',
-                  ].map((step, i, arr) => (
-                    <div key={step} className="flex items-center gap-2">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-mono shrink-0">
+                    { step: 'REPORT', desc: 'Multi-lingual citizen SOS & voice signal' },
+                    { step: 'AI UNDERSTANDS', desc: 'Gemini extraction of needs & road blockages' },
+                    { step: 'INCIDENTS FUSED', desc: 'Geospatial & temporal clustering' },
+                    { step: 'RISK CHANGES', desc: 'Transparent 0–100 heuristic scoring' },
+                    { step: 'RESOURCES OPTIMIZED', desc: 'Multi-criteria asset recommendation' },
+                    { step: 'HUMAN APPROVES', desc: 'Authorized officer review & verification' },
+                    { step: 'AUTOMATION EXECUTES', desc: 'Dispatch alerts via WhatsApp, SMS, Email' },
+                    { step: 'LIVE SYSTEM MONITORS', desc: 'Real-time telemetry, GPS & WebSocket fan-out' },
+                    { step: 'FAILURE DETECTED', desc: 'Automatic delay & blockage detection' },
+                    { step: 'RESPONSE ADAPTS', desc: 'Autonomous re-routing & dynamic alternatives' },
+                    { step: 'INCIDENT RESOLVED', desc: 'Post-incident report & learning loop' },
+                  ].map((item, i, arr) => (
+                    <div key={item.step} className="flex items-center gap-2.5 p-1 rounded hover:bg-white/10 transition-colors">
+                      <div className="flex h-5 w-5 items-center justify-center rounded bg-amber-500/25 text-amber-300 text-[10px] font-bold shrink-0 border border-amber-400/30">
                         {String(i + 1).padStart(2, '0')}
                       </div>
-                      <span className="text-xs font-medium">{step}</span>
+                      <span className="font-bold text-white text-[11px] shrink-0 tracking-wide">
+                        {item.step}
+                      </span>
+                      <span className="text-[10px] text-slate-100 font-medium truncate hidden sm:inline">
+                        — {item.desc}
+                      </span>
                       {i < arr.length - 1 && (
-                        <div className="ml-auto text-muted-foreground/40">↓</div>
+                        <div className="ml-auto text-slate-400/50 text-[10px]">↓</div>
                       )}
                     </div>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -254,12 +335,7 @@ export function LandingView() {
       </section>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-border bg-card/50 px-4 py-4 text-[11px] text-muted-foreground">
-        <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-2">
-          <span>RESOURCEFLOW AI · Prototype decision-support score — not a medically or scientifically validated model.</span>
-          <span className="font-mono">Hackathon build · v1.0</span>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

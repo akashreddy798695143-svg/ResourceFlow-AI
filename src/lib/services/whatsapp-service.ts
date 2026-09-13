@@ -124,27 +124,37 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
         `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
 
       /*
-       * IMPORTANT:
+       * Twilio WhatsApp delivery strategy:
        *
-       * Trial WhatsApp does NOT allow arbitrary Body messages.
+       * - Twilio TRIAL accounts: ContentVariables is BLOCKED (causes "Invalid or
+       *   disallowed parameters" error). Use plain Body text, which IS allowed
+       *   for verified numbers on trial accounts.
        *
-       * Therefore we use:
+       * - If WHATSAPP_CONTENT_SID is set AND the message contains template
+       *   variables, send ContentSid + ContentVariables (production mode).
        *
-       * ContentSid
-       * ContentVariables
-       *
-       * instead of Body.
+       * - Otherwise, truncate the message to 1600 chars and send as plain Body.
+       *   This works for trial accounts with verified recipient numbers.
        */
-
       const variables = createTemplateVariables(message)
+      const hasTemplateVars = Object.values(variables).some(Boolean)
 
-      // Trial accounts: only send required parameters
-      // Do NOT include optional parameters like StatusCallback, MessagingServiceSid, etc.
+      // Trial-safe: use plain Body by default; only use ContentSid+ContentVariables
+      // when the ContentSid is confirmed needed and the message has actual vars.
+      const usePlainBody = !hasTemplateVars || process.env.WHATSAPP_TRIAL_MODE === 'true'
+
       const body = new URLSearchParams()
       body.append('To', formattedTo)
       body.append('From', from)
-      body.append('ContentSid', contentSid)
-      body.append('ContentVariables', JSON.stringify(variables))
+
+      if (usePlainBody) {
+        // Plain body — works on trial accounts for verified numbers
+        body.append('Body', message.slice(0, 1600))
+      } else {
+        // ContentSid + ContentVariables — for production templates
+        body.append('ContentSid', contentSid)
+        body.append('ContentVariables', JSON.stringify(variables))
+      }
 
       // Account SID + Auth Token
       const basicAuth = Buffer
@@ -152,12 +162,12 @@ class TwilioWhatsAppProvider implements WhatsAppProvider {
         .toString('base64')
 
       console.log(
-        '[whatsapp:twilio] sending template message',
+        '[whatsapp:twilio] sending message',
         {
           to: maskPhone(to),
           from,
-          contentSid,
-          variables,
+          mode: usePlainBody ? 'body' : 'content-sid',
+          ...(usePlainBody ? {} : { contentSid, variables }),
         }
       )
 

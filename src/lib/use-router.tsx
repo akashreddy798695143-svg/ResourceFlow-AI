@@ -49,6 +49,18 @@ function parseParams(path: string): Record<string, string> {
   return out
 }
 
+const defaultRouter: RouterValue = {
+  path: '/',
+  navigate: (p: string) => {
+    if (typeof window !== 'undefined') {
+      if (!p.startsWith('/')) p = '/' + p
+      window.location.hash = p
+    }
+  },
+  params: {},
+}
+
 export function useRouter() {
-  return useContext(RouterContext)
+  const ctx = useContext(RouterContext)
+  return ctx || defaultRouter
 }

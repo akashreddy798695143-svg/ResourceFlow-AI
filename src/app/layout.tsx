@@ -22,6 +22,8 @@ export const metadata: Metadata = {
   authors: [{ name: "RESOURCEFLOW AI" }],
 };
 
+import { ThemeProvider } from "@/lib/use-theme";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -41,10 +43,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen`}
       >
-        {children}
-        <AIAssistant />
-        <Toaster />
-        <SonnerToaster position="top-right" richColors closeButton />
+        <ThemeProvider>
+          {children}
+          <AIAssistant />
+          <Toaster />
+          <SonnerToaster position="top-right" richColors closeButton />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -45,73 +45,73 @@
 
 :root {
   --radius: 0.625rem;
-  /* Light theme — clean neutral with amber primary */
-  --background: oklch(0.985 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.55 0.18 39);          /* amber-600 */
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.55 0.18 39);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.55 0.18 39);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.55 0.18 39);
+  /* Light theme — clean, bright, professional, high-readability emergency management surface */
+  --background: oklch(0.985 0.002 240);
+  --foreground: oklch(0.16 0.02 260);
+  --card: #ffffff;
+  --card-foreground: oklch(0.16 0.02 260);
+  --popover: #ffffff;
+  --popover-foreground: oklch(0.16 0.02 260);
+  --primary: oklch(0.56 0.19 40);          /* amber-600 */
+  --primary-foreground: #ffffff;
+  --secondary: oklch(0.96 0.005 250);
+  --secondary-foreground: oklch(0.20 0.02 260);
+  --muted: oklch(0.96 0.005 250);
+  --muted-foreground: oklch(0.46 0.02 250);
+  --accent: oklch(0.95 0.008 250);
+  --accent-foreground: oklch(0.20 0.02 260);
+  --destructive: oklch(0.56 0.24 27);
+  --border: oklch(0.89 0.01 250);
+  --input: oklch(0.89 0.01 250);
+  --ring: oklch(0.56 0.19 40);
+  --chart-1: oklch(0.56 0.19 40);
+  --chart-2: oklch(0.55 0.15 155);
+  --chart-3: oklch(0.48 0.16 250);
+  --chart-4: oklch(0.70 0.16 75);
+  --chart-5: oklch(0.60 0.20 25);
+  --sidebar: #ffffff;
+  --sidebar-foreground: oklch(0.16 0.02 260);
+  --sidebar-primary: oklch(0.56 0.19 40);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: oklch(0.96 0.005 250);
+  --sidebar-accent-foreground: oklch(0.20 0.02 260);
+  --sidebar-border: oklch(0.89 0.01 250);
+  --sidebar-ring: oklch(0.56 0.19 40);
 }
 
 .dark {
-  /* Dark theme — government emergency command center (deep navy + amber) */
-  --background: oklch(0.145 0.025 255);     /* deep navy-slate */
-  --foreground: oklch(0.96 0 0);
-  --card: oklch(0.19 0.022 255);
-  --card-foreground: oklch(0.96 0 0);
-  --popover: oklch(0.19 0.022 255);
-  --popover-foreground: oklch(0.96 0 0);
-  --primary: oklch(0.7 0.17 60);           /* amber-500 */
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.25 0.025 255);
-  --secondary-foreground: oklch(0.96 0 0);
-  --muted: oklch(0.25 0.025 255);
-  --muted-foreground: oklch(0.72 0 0);
-  --accent: oklch(0.30 0.025 255);
-  --accent-foreground: oklch(0.96 0 0);
+  /* Dark theme — government emergency command center (deep navy-slate + amber + tactical emerald) */
+  --background: oklch(0.135 0.025 255);     /* deep command-center navy-slate */
+  --foreground: oklch(0.96 0.005 255);
+  --card: oklch(0.175 0.022 255);
+  --card-foreground: oklch(0.96 0.005 255);
+  --popover: oklch(0.175 0.022 255);
+  --popover-foreground: oklch(0.96 0.005 255);
+  --primary: oklch(0.72 0.17 60);           /* luminous amber-500 */
+  --primary-foreground: oklch(0.12 0.02 255);
+  --secondary: oklch(0.23 0.025 255);
+  --secondary-foreground: oklch(0.96 0.005 255);
+  --muted: oklch(0.23 0.025 255);
+  --muted-foreground: oklch(0.72 0.01 250);
+  --accent: oklch(0.27 0.025 255);
+  --accent-foreground: oklch(0.96 0.005 255);
   --destructive: oklch(0.65 0.24 25);
-  --border: oklch(1 0 0 / 8%);
+  --border: oklch(1 0 0 / 9%);
   --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.7 0.17 60);
-  --chart-1: oklch(0.7 0.17 60);          /* amber */
-  --chart-2: oklch(0.65 0.18 145);        /* emerald */
-  --chart-3: oklch(0.55 0.2 255);         /* blue */
-  --chart-4: oklch(0.75 0.19 320);        /* magenta */
-  --chart-5: oklch(0.65 0.2 12);          /* red-orange */
-  --sidebar: oklch(0.11 0.025 255);       /* darker navy for sidebar */
-  --sidebar-foreground: oklch(0.96 0 0);
-  --sidebar-primary: oklch(0.7 0.17 60);
-  --sidebar-primary-foreground: oklch(0.145 0 0);
-  --sidebar-accent: oklch(0.25 0.025 255);
-  --sidebar-accent-foreground: oklch(0.96 0 0);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.7 0.17 60);
+  --ring: oklch(0.72 0.17 60);
+  --chart-1: oklch(0.72 0.17 60);          /* amber */
+  --chart-2: oklch(0.68 0.18 145);         /* emerald */
+  --chart-3: oklch(0.60 0.20 255);         /* tactical blue */
+  --chart-4: oklch(0.75 0.19 320);         /* magenta */
+  --chart-5: oklch(0.65 0.20 12);          /* red-orange */
+  --sidebar: oklch(0.11 0.025 255);        /* dark navy sidebar */
+  --sidebar-foreground: oklch(0.96 0.005 255);
+  --sidebar-primary: oklch(0.72 0.17 60);
+  --sidebar-primary-foreground: oklch(0.12 0.02 255);
+  --sidebar-accent: oklch(0.22 0.025 255);
+  --sidebar-accent-foreground: oklch(0.96 0.005 255);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.72 0.17 60);
 }
 
 @layer base {
@@ -119,18 +119,23 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
-    /* Disaster-themed animated background — subtle, professional, not flashy */
+    @apply bg-background text-foreground transition-colors duration-150;
+  }
+  .dark body {
+    /* Disaster-themed animated background for command center */
     background-image:
-      /* Flood: horizontal water ripples (blue, very subtle, slow wave) */
-      radial-gradient(ellipse 800px 120px at 20% 90%, oklch(0.45 0.08 240 / 0.04) 0%, transparent 60%),
-      radial-gradient(ellipse 600px 100px at 70% 95%, oklch(0.5 0.10 230 / 0.03) 0%, transparent 55%),
-      /* Earthquake: faint diagonal tremor lines (warm tone, very subtle) */
-      repeating-linear-gradient(135deg, transparent 0px, transparent 80px, oklch(0.6 0.05 30 / 0.015) 80px, oklch(0.6 0.05 30 / 0.015) 81px),
-      /* Road block: dashed yellow lines (horizontal, very faint) */
-      repeating-linear-gradient(90deg, transparent 0px, transparent 120px, oklch(0.7 0.12 80 / 0.012) 120px, oklch(0.7 0.12 80 / 0.012) 140px, transparent 140px, transparent 240px),
-      /* Base gradient: deep navy with amber glow at top */
-      linear-gradient(180deg, oklch(0.16 0.03 260) 0%, oklch(0.145 0.025 255) 50%, oklch(0.13 0.02 250) 100%);
+      radial-gradient(ellipse 800px 140px at 20% 90%, oklch(0.45 0.08 240 / 0.04) 0%, transparent 60%),
+      radial-gradient(ellipse 600px 120px at 70% 95%, oklch(0.5 0.10 230 / 0.03) 0%, transparent 55%),
+      repeating-linear-gradient(135deg, transparent 0px, transparent 80px, oklch(0.6 0.05 30 / 0.012) 80px, oklch(0.6 0.05 30 / 0.012) 81px),
+      linear-gradient(180deg, oklch(0.15 0.03 260) 0%, oklch(0.135 0.025 255) 50%, oklch(0.12 0.02 250) 100%);
+    background-attachment: fixed;
+  }
+  html:not(.dark) body {
+    /* Clean, crisp light theme with very subtle administrative depth */
+    background-color: oklch(0.985 0.002 240);
+    background-image:
+      radial-gradient(ellipse 900px 240px at 50% 0%, oklch(0.56 0.19 40 / 0.03) 0%, transparent 70%),
+      linear-gradient(180deg, #fafbfc 0%, #f4f6f9 100%);
     background-attachment: fixed;
   }
 }
@@ -172,22 +177,58 @@
   100% { opacity: 1; transform: translateY(0); }
 }
 
-/* Severity & status utility colors */
+/* Subtle, dignified emergency hero zoom (Ken Burns) */
+@keyframes rf-hero-zoom {
+  0%, 100% { transform: scale(1.0); }
+  50% { transform: scale(1.035) translate(-0.5%, -0.3%); }
+}
+
+.rf-hero-kenburns {
+  animation: rf-hero-zoom 28s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Hero readability: thick, sharp foreground text over rotating disaster photography.
+   Adds a soft dark halo so near-white text stays readable on bright OR dark images,
+   without reducing the visibility of the background itself. */
+.rf-hero-text {
+  text-shadow:
+    0 1px 2px rgba(2, 8, 18, 0.9),
+    0 2px 8px rgba(2, 8, 18, 0.75),
+    0 4px 16px rgba(2, 8, 18, 0.55);
+}
+
+/* Severity & status utility colors — high-contrast for both light and dark modes */
 @layer utilities {
-  .sev-LOW { color: oklch(0.6 0.13 145); }
-  .sev-MEDIUM { color: oklch(0.75 0.16 80); }
-  .sev-HIGH { color: oklch(0.7 0.17 50); }
-  .sev-CRITICAL { color: oklch(0.65 0.24 25); }
+  .sev-LOW { color: oklch(0.48 0.16 145); }
+  .sev-MEDIUM { color: oklch(0.55 0.17 75); }
+  .sev-HIGH { color: oklch(0.52 0.20 40); }
+  .sev-CRITICAL { color: oklch(0.50 0.25 25); }
 
-  .bg-sev-LOW { background-color: oklch(0.6 0.13 145 / 0.15); }
-  .bg-sev-MEDIUM { background-color: oklch(0.75 0.16 80 / 0.15); }
-  .bg-sev-HIGH { background-color: oklch(0.7 0.17 50 / 0.18); }
-  .bg-sev-CRITICAL { background-color: oklch(0.65 0.24 25 / 0.2); }
+  .dark .sev-LOW { color: oklch(0.72 0.16 145); }
+  .dark .sev-MEDIUM { color: oklch(0.80 0.17 80); }
+  .dark .sev-HIGH { color: oklch(0.76 0.18 50); }
+  .dark .sev-CRITICAL { color: oklch(0.70 0.24 25); }
 
-  .border-sev-LOW { border-color: oklch(0.6 0.13 145 / 0.4); }
-  .border-sev-MEDIUM { border-color: oklch(0.75 0.16 80 / 0.4); }
-  .border-sev-HIGH { border-color: oklch(0.7 0.17 50 / 0.5); }
-  .border-sev-CRITICAL { border-color: oklch(0.65 0.24 25 / 0.55); }
+  .bg-sev-LOW { background-color: oklch(0.55 0.15 145 / 0.12); }
+  .bg-sev-MEDIUM { background-color: oklch(0.65 0.16 75 / 0.14); }
+  .bg-sev-HIGH { background-color: oklch(0.60 0.18 40 / 0.15); }
+  .bg-sev-CRITICAL { background-color: oklch(0.55 0.22 25 / 0.18); }
+
+  .dark .bg-sev-LOW { background-color: oklch(0.68 0.16 145 / 0.18); }
+  .dark .bg-sev-MEDIUM { background-color: oklch(0.78 0.16 80 / 0.18); }
+  .dark .bg-sev-HIGH { background-color: oklch(0.72 0.18 50 / 0.20); }
+  .dark .bg-sev-CRITICAL { background-color: oklch(0.68 0.24 25 / 0.22); }
+
+  .border-sev-LOW { border-color: oklch(0.55 0.15 145 / 0.35); }
+  .border-sev-MEDIUM { border-color: oklch(0.65 0.16 75 / 0.35); }
+  .border-sev-HIGH { border-color: oklch(0.60 0.18 40 / 0.40); }
+  .border-sev-CRITICAL { border-color: oklch(0.55 0.22 25 / 0.45); }
+
+  .dark .border-sev-LOW { border-color: oklch(0.68 0.16 145 / 0.45); }
+  .dark .border-sev-MEDIUM { border-color: oklch(0.78 0.16 80 / 0.45); }
+  .dark .border-sev-HIGH { border-color: oklch(0.72 0.18 50 / 0.50); }
+  .dark .border-sev-CRITICAL { border-color: oklch(0.68 0.24 25 / 0.60); }
 
   /* Custom scrollbar for long lists */
   .rf-scroll::-webkit-scrollbar { width: 6px; height: 6px; }

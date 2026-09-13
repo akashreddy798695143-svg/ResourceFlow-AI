@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { Notification, Incident } from '@/lib/types'
 import { NotificationTypeBadge } from '@/components/shared/badges'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 
 interface NavItem {
   label: string
@@ -184,12 +185,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
           <div className="ml-auto flex items-center gap-2">
             {/* Realtime status */}
-            <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/60">
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border/60 bg-muted/40">
               <span className={cn('h-2 w-2 rounded-full', connected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500')} />
-              <span className="text-[10px] font-mono text-muted-foreground">
-                {connected ? 'LIVE' : 'RECONNECT'}
+              <span className="text-[10px] font-mono font-medium text-muted-foreground">
+                {connected ? 'LIVE TELEMETRY' : 'RECONNECT'}
               </span>
             </div>
+
+            {/* Theme switcher */}
+            <ThemeToggle size="icon" />
 
             {/* Notifications */}
             <DropdownMenu>
