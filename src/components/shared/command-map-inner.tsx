@@ -154,7 +154,7 @@ export function CommandMapInner({
           title={fullscreen ? 'Exit full screen' : 'View full screen'}
         >
           {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-          {fullscreen ? 'Exit' : 'Full Screen'}
+          <span className="hidden sm:inline">{fullscreen ? 'Exit' : 'Full Screen'}</span>
         </button>
       )}
 
@@ -164,7 +164,7 @@ export function CommandMapInner({
           onClick={() => setShowLayers(!showLayers)}
           className="rounded-md border border-border bg-card/90 backdrop-blur p-2 text-xs hover:bg-accent/40 transition flex items-center gap-1.5"
         >
-          <Layers className="h-4 w-4" /> {activeLayer.label}
+          <Layers className="h-4 w-4" /> <span className="hidden sm:inline">{activeLayer.label}</span>
         </button>
         {showLayers && (
           <div className="mt-1 rounded-md border border-border bg-card/95 backdrop-blur p-1 space-y-0.5">
@@ -185,7 +185,7 @@ export function CommandMapInner({
         className={cn('absolute top-14 left-3 z-[1000] rounded-md border border-border bg-card/90 backdrop-blur p-2 text-xs hover:bg-accent/40 transition flex items-center gap-1.5', showHeatmap && 'text-primary border-primary/50')}
         title="Toggle risk heatmap"
       >
-        <Crosshair className="h-4 w-4" /> {showHeatmap ? 'Heatmap on' : 'Heatmap off'}
+        <Crosshair className="h-4 w-4" /> <span className="hidden sm:inline">{showHeatmap ? 'Heatmap on' : 'Heatmap off'}</span>
       </button>
 
       {/* Legend */}

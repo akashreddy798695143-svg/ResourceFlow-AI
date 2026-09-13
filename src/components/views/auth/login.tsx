@@ -92,7 +92,7 @@ export function LoginView() {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Top utility bar */}
-      <div className="w-full flex items-center justify-between px-4 py-3 border-b border-border/60 bg-card/40 backdrop-blur z-20">
+      <div className="w-full flex items-center justify-between gap-2 px-3 sm:px-4 py-3 border-b border-border/60 bg-card/40 backdrop-blur z-20">
         <button
           onClick={() => navigate('/')}
           className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors font-medium"
@@ -111,7 +111,7 @@ export function LoginView() {
       </div>
 
       {/* Main split viewport */}
-      <div className="flex-1 grid lg:grid-cols-12 min-h-[calc(100vh-49px)]">
+      <div className="flex-1 grid lg:grid-cols-12 min-h-[calc(100dvh-49px)]">
         {/* Left column: Disaster management operational visual banner */}
         <div className="lg:col-span-6 xl:col-span-7 hidden lg:relative lg:flex flex-col justify-between p-10 xl:p-14 overflow-hidden border-r border-border/80">
           {/* Background image with high-grade tactical gradient overlay */}
@@ -182,8 +182,8 @@ export function LoginView() {
         </div>
 
         {/* Right column: Clean, focused, professional login card */}
-        <div className="lg:col-span-6 xl:col-span-5 flex flex-col justify-center items-center p-4 sm:p-8 relative bg-card/30">
-          <div className="w-full max-w-[420px] mx-auto">
+        <div className="lg:col-span-6 xl:col-span-5 flex flex-col justify-center items-center px-3 py-4 sm:p-8 relative bg-card/30">
+          <div className="w-full min-w-0 max-w-[420px] mx-auto">
             {/* Header logo for mobile */}
             <div className="lg:hidden flex items-center justify-center gap-2.5 mb-6">
               <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-md shadow-primary/25">

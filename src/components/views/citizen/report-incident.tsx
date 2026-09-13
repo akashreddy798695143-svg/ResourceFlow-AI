@@ -18,6 +18,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { OfflineQueueStatus } from '@/components/features/offline-queue-status'
+import { addReport as enqueueOfflineReport, type QueuedReport, loadQueue, saveQueue } from '@/lib/features/offline-queue'
+import { MissingInfoCard } from '@/components/features/missing-info-card'
 
 // Type alias for the Web Speech API (not in standard TS DOM lib)
 type SpeechRecognitionType = any
@@ -51,14 +54,6 @@ interface GpsFix {
   timestamp: string
 }
 
-interface QueuedReport {
-  id: string
-  payload: Record<string, unknown>
-  queuedAt: string
-}
-
-const QUEUED_REPORTS_KEY = 'resourceflow:queued-reports'
-
 export function ReportIncidentView() {
   const { navigate } = useRouter()
   const { user } = useAuth()
@@ -82,6 +77,8 @@ export function ReportIncidentView() {
   const [photoError, setPhotoError] = useState<string | null>(null)
   const [isOnline, setIsOnline] = useState(true)
   const [queuedReports, setQueuedReports] = useState<QueuedReport[]>([])
+  // 5 NEW: Submitted incident id (drives the MissingInfoCard)
+  const [submittedIncidentId, setSubmittedIncidentId] = useState<string | null>(null)
 
   // Speech recognition state
   const [listening, setListening] = useState(false)
@@ -93,8 +90,26 @@ export function ReportIncidentView() {
   useEffect(() => {
     requestGps()
     setIsOnline(navigator.onLine)
+    // Migrate from old queue key if present (keeps citizens out of losing work).
     try {
-      setQueuedReports(JSON.parse(localStorage.getItem(QUEUED_REPORTS_KEY) || '[]'))
+      const oldRaw = localStorage.getItem('resourceflow:queued-reports')
+      if (oldRaw) {
+        const oldArr = JSON.parse(oldRaw || '[]') as Array<{ id: string; payload: any; queuedAt: string }>
+        if (Array.isArray(oldArr) && oldArr.length > 0) {
+          const migrated: QueuedReport[] = oldArr.map((o) => ({
+            id: o.id || crypto.randomUUID(),
+            idempotencyKey: o.id || crypto.randomUUID(),
+            payload: { ...o.payload, idempotencyKey: o.id || crypto.randomUUID() },
+            queuedAt: o.queuedAt || new Date().toISOString(),
+            attempt: 0,
+            state: 'PENDING_SYNC',
+            lastError: null,
+          }))
+          for (const m of migrated) enqueueOfflineReport(m)
+          localStorage.removeItem('resourceflow:queued-reports')
+        }
+      }
+      setQueuedReports(loadQueue())
     } catch {
       setQueuedReports([])
     }
@@ -107,25 +122,25 @@ export function ReportIncidentView() {
 
   const saveQueuedReports = useCallback((reports: QueuedReport[]) => {
     setQueuedReports(reports)
-    localStorage.setItem(QUEUED_REPORTS_KEY, JSON.stringify(reports))
+    saveQueue(reports)
   }, [])
 
   const flushQueuedReports = useCallback(async () => {
-    let reports: QueuedReport[] = []
-    try { reports = JSON.parse(localStorage.getItem(QUEUED_REPORTS_KEY) || '[]') } catch { return }
-    if (!reports.length) return
-
-    const remaining: QueuedReport[] = []
-    for (const report of reports) {
-      try {
-        await apiPost('/api/incidents', report.payload)
-        toast.success('Queued emergency report submitted')
-      } catch {
-        remaining.push(report)
+    // Reads from the NEW resilient queue and triggers idempotency-aware sync.
+    const { syncAll } = await import('@/lib/features/offline-queue')
+    try {
+      const res = await syncAll()
+      if (res.synced > 0) {
+        toast.success(`${res.synced} queued report(s) synced to the server.`)
       }
+      if (res.remaining > 0) {
+        toast.warning(`${res.remaining} report(s) still pending — retry when online.`)
+      }
+      setQueuedReports(loadQueue())
+    } catch {
+      /* ignore */
     }
-    saveQueuedReports(remaining)
-  }, [saveQueuedReports])
+  }, [])
 
   useEffect(() => {
     const handleOnline = () => {
@@ -314,12 +329,28 @@ export function ReportIncidentView() {
       toast.success(`Report received: ${res.incidentCode}`, {
         description: 'AI analysis started. Track status with your incident code.',
       })
-      navigate(user?.role === 'CITIZEN' ? '/citizen-dashboard' : `/incidents/${res.id}`)
+      // 5 NEW — store the submitted incident id so the Missing Info card is shown
+      setSubmittedIncidentId(res.id)
+      // Keep user on this page so they can answer follow-up questions; clear form
+      setDescription('')
+      setInterimTranscript('')
     } catch (e: any) {
-      if (!navigator.onLine || e?.name === 'TypeError') {
-        const report: QueuedReport = { id: crypto.randomUUID(), payload, queuedAt: new Date().toISOString() }
-        saveQueuedReports([...queuedReports, report])
-        toast.success('Saved on this device', { description: 'The report will submit automatically when connectivity returns.' })
+      if (!navigator.onLine || e?.name === 'TypeError' || /Failed to fetch|NetworkError|load/i.test(e?.name || '')) {
+        const id = crypto.randomUUID()
+        const report: QueuedReport = {
+          id,
+          idempotencyKey: id,
+          payload: { ...payload, idempotencyKey: id },
+          queuedAt: new Date().toISOString(),
+          attempt: 0,
+          state: 'PENDING_SYNC',
+          lastError: null,
+        }
+        enqueueOfflineReport(report)
+        saveQueuedReports([...loadQueue()])
+        toast.success('LOCAL SAVED — emergency report saved on this device.', {
+          description: 'OFFLINE MODE: auto-sync when connectivity returns.',
+        })
       } else {
         toast.error(e.message)
       }
@@ -340,11 +371,23 @@ export function ReportIncidentView() {
         <p className="text-sm text-muted-foreground mt-1">
           Your location is captured automatically. Your identity is attached from your account.
         </p>
-        <div className={cn('mt-3 flex items-center justify-between rounded-md border px-3 py-2 text-xs', isOnline ? 'border-sev-LOW/30 bg-sev-LOW/10 text-sev-LOW' : 'border-sev-MEDIUM/40 bg-sev-MEDIUM/10 text-sev-MEDIUM')}>
-          <span className="flex items-center gap-1.5">{isOnline ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />} {isOnline ? 'Online — reports submit normally' : 'Offline — reports will be saved locally'}</span>
-          {queuedReports.length > 0 && <span className="font-mono">{queuedReports.length} queued</span>}
+        <div className={cn('mt-3 flex flex-wrap items-center justify-between gap-1.5 rounded-md border px-3 py-2 text-xs', isOnline ? 'border-sev-LOW/30 bg-sev-LOW/10 text-sev-LOW' : 'border-sev-MEDIUM/40 bg-sev-MEDIUM/10 text-sev-MEDIUM')}>
+          <span className="flex items-center gap-1.5 min-w-0">{isOnline ? <Wifi className="h-3.5 w-3.5 shrink-0" /> : <WifiOff className="h-3.5 w-3.5 shrink-0" />} <span className="min-w-0">{isOnline ? 'Online — reports submit normally' : 'OFFLINE MODE — emergency report saved securely on this device'}</span></span>
+          {queuedReports.length > 0 && <span className="font-mono shrink-0">{queuedReports.length} queued</span>}
         </div>
       </div>
+
+      {/* 5 NEW: Offline queue status (sync states) — always visible */}
+      <div className="mb-4">
+        <OfflineQueueStatus />
+      </div>
+
+      {/* 5 NEW: Missing information follow-up (only after a successful submission) */}
+      {submittedIncidentId && (
+        <div className="mb-4">
+          <MissingInfoCard incidentId={submittedIncidentId} />
+        </div>
+      )}
 
       <Card>
         <CardContent className="p-5">
@@ -352,7 +395,7 @@ export function ReportIncidentView() {
             {/* Language selector */}
             <div className="space-y-1.5">
               <Label className="flex items-center gap-1.5"><Languages className="h-3.5 w-3.5" /> Language</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {LANGUAGES.map((l) => (
                   <Button
                     key={l.code}
@@ -485,7 +528,7 @@ export function ReportIncidentView() {
             {mapPicker && (
               <div className="rounded-md border border-border bg-card/40 p-3 space-y-2">
                 <p className="text-xs font-medium">Enter coordinates manually:</p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <Input type="number" step="any" placeholder="Latitude (e.g. 27.7172)" value={manualLat} onChange={(e) => setManualLat(e.target.value)} />
                   <Input type="number" step="any" placeholder="Longitude (e.g. 85.324)" value={manualLng} onChange={(e) => setManualLng(e.target.value)} />
                 </div>

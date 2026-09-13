@@ -20,6 +20,7 @@ import { ResourcesView } from '@/components/views/officer/resources'
 import { ApprovalsView } from '@/components/views/officer/approvals'
 import { SimulationCenterView } from '@/components/views/simulation/simulation-center'
 import { AdvancedCenterView } from '@/components/views/advanced/advanced-center'
+import { ResponseIntelCenterView } from '@/components/views/intel/response-intel-center'
 import { AnalyticsView } from '@/components/views/analytics'
 import { AuditLogsView } from '@/components/views/audit-logs'
 import { SettingsView } from '@/components/views/settings'
@@ -132,6 +133,7 @@ function Routed() {
   if (route.startsWith('resources')) return <DashboardShell><ResourcesView /></DashboardShell>
   if (route.startsWith('approvals')) return <DashboardShell><ApprovalsView /></DashboardShell>
   if (route.startsWith('simulation')) return <DashboardShell><SimulationCenterView /></DashboardShell>
+  if (route.startsWith('response-intel')) return <DashboardShell><ResponseIntelCenterView /></DashboardShell>
   if (route.startsWith('ai-center')) return <DashboardShell><AdvancedCenterView /></DashboardShell>
   if (route.startsWith('analytics')) return <DashboardShell><AnalyticsView /></DashboardShell>
   if (route.startsWith('audit')) return <DashboardShell><AuditLogsView /></DashboardShell>

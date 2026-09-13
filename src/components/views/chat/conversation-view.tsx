@@ -271,7 +271,7 @@ export function ChatConversationView({ conversationId }: { conversationId: strin
     }
   }
     return (
-    <div className="flex flex-col h-[calc(100vh-6rem)] max-w-3xl mx-auto">
+    <div className="flex flex-col h-[calc(100dvh-13rem)] min-h-[360px] max-h-[720px] max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 px-1 py-2 border-b border-border">
         <Button variant="ghost" size="sm" onClick={() => navigate('/chat')} aria-label="Back to conversations">

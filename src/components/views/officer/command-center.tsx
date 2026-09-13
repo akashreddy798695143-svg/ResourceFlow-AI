@@ -25,6 +25,7 @@ import type {
 } from '@/lib/types'
 import { StatusBadge, RiskBadge, IncidentTypeBadge } from '@/components/shared/badges'
 import { CommandMap } from '@/components/shared/command-map'
+import { ResourceConflictCard } from '@/components/features/resource-conflict-card'
 
 export function CommandCenterView() {
   const { navigate } = useRouter()
@@ -196,8 +197,8 @@ export function CommandCenterView() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <RadioTower className="h-5 w-5" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight">
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-bold tracking-tight">
                 Emergency Operations Center
               </h1>
               <p className="text-[10px] text-muted-foreground">
@@ -226,7 +227,7 @@ export function CommandCenterView() {
             </Badge>
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex-wrap items-center gap-2">
             <span className="text-xs text-muted-foreground hidden sm:inline">
               Demo Scenarios:
             </span>
@@ -394,6 +395,11 @@ export function CommandCenterView() {
           </button>
         ))}
 
+      </div>
+
+      {/* 5 NEW: AI Resource Conflict Detector (FEATURE 1) */}
+      <div className="px-3 md:px-6 pb-3">
+        <ResourceConflictCard />
       </div>
 
       {/* Main grid: map (left, big) + side panel (right) */}

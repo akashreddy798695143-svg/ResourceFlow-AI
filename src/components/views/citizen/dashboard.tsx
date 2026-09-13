@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge'
 import { IncidentTypeBadge, RiskBadge, StatusBadge } from '@/components/shared/badges'
 import type { Incident, IncidentStatus, RiskLevel, DashboardEvent } from '@/lib/types'
 import { EmergencyServices } from '@/components/shared/emergency-services'
+import { NearestHelpCard } from '@/components/features/nearest-help-card'
+import { OfflineQueueStatus } from '@/components/features/offline-queue-status'
 
 export function CitizenDashboardView() {
   const { navigate } = useRouter()
@@ -120,9 +122,9 @@ export function CitizenDashboardView() {
       {/* Track Incident */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <form onSubmit={track} className="flex gap-2">
-            <Input placeholder="Track by code: RF-2026-000001" value={trackCode} onChange={(e) => setTrackCode(e.target.value)} className="flex-1" />
-            <Button type="submit" variant="outline" className="gap-1.5">
+          <form onSubmit={track} className="flex flex-col sm:flex-row gap-2">
+            <Input placeholder="Track by code: RF-2026-000001" value={trackCode} onChange={(e) => setTrackCode(e.target.value)} className="flex-1 min-w-0" />
+            <Button type="submit" variant="outline" className="gap-1.5 shrink-0">
               <Search className="h-4 w-4" /> Track
             </Button>
           </form>
@@ -135,6 +137,15 @@ export function CitizenDashboardView() {
           <EmergencyServices lat={incidents[0].latitude} lng={incidents[0].longitude} />
         </div>
       )}
+
+      {/* 5 NEW: Nearest Help (FEATURE 3) + Offline Queue (FEATURE 5) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {incidents[0]?.latitude && incidents[0]?.id && (
+          <NearestHelpCard incidentId={incidents[0].id} />
+        )}
+        {!incidents[0]?.latitude && <NearestHelpCard />}
+        <OfflineQueueStatus />
+      </div>
 
       {/* Incidents List */}
       {loading ? (

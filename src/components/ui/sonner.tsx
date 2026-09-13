@@ -17,6 +17,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-border": "var(--border)",
         } as React.CSSProperties
       }
+      toastOptions={{ classNames: { toast: 'max-w-[calc(100vw-1.5rem)]' }}}
       {...props}
     />
   )

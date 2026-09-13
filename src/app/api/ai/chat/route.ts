@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { askAI } from '@/lib/ai-client'
 import { db } from '@/lib/db'
+import { requireAuth, handleAuthError } from '@/lib/auth'
+import { buildChatbotContext } from '@/lib/features/chatbot-context'
 
 /**
  * Gather a concise, operational-only snapshot of live ResourceFlow AI data
@@ -94,16 +96,28 @@ export async function POST(request: NextRequest) {
     }
 
     const { text: contextText } = await buildContextText()
-
+    // Resolve authenticated user so we can inject per-role feature context.
+    let role = 'GUEST'
+    let userId = 'anonymous'
+    try {
+      const me = await requireAuth()
+      role = me.role
+      userId = me.id
+    } catch {
+      // Public anonymous use — treat as guest; conflicts/missing-info scopes are dropped.
+    }
+    const featureContext = role === 'GUEST' ? '' : await buildChatbotContext(role, userId)
     // Debug logging — no API keys, passwords, or citizen PII.
     console.log(`[ai/chat] incoming prompt (${userPrompt.trim().length} chars): "${userPrompt.trim().slice(0, 120)}"`)
 
-    const systemPrompt = `
-You are ResourceFlow AI, an AI-powered disaster management and
-emergency coordination assistant for the ResourceFlow AI platform.
+        const systemPrompt = `
+    You are ResourceFlow AI, an AI-powered disaster management and
+    emergency coordination assistant for the ResourceFlow AI platform.
+    LIVE APPLICATION CONTEXT (use this instead of inventing data):
+    ${contextText}
 
-LIVE APPLICATION CONTEXT (use this instead of inventing data):
-${contextText}
+    5 NEW GAME-CHANGER CAPABILITIES — when asked, base your answers ONLY on the FEATURE CONTEXT below; if data is unavailable, say so explicitly.
+    ${featureContext || '(No feature context available for guest/anonymous user)'}
 
 When a user asks about the current situation or available resources,
 base your answer on the LIVE APPLICATION CONTEXT above.
@@ -149,6 +163,15 @@ For flood-related questions, use:
 AI recommendations are decision-support information and do not replace
 authorized emergency personnel. For urgent life-threatening emergencies,
 recommend contacting local emergency services.
+
+RELATED FEATURE QUERIES:
+- "Are there any resource conflicts?" — Read the RESOURCE CONFLICTS section above and summarise any detected conflicts (resource codes, incidents, recommendations).
+- "What information is missing from my incident?" — Read the CITIZEN MISSING INFORMATION section above.
+- "I need medical help." / "Find the nearest safe place." / "Where can I get rescue support?" — Read the CITIZEN NEAREST HELP / OFFICER NEAREST HELP section above and present only the actual database-record options, with their real distances (or DATA UNAVAILABLE).
+- "Where is my incident?" / "navigation" / "route" — Read the ROUTE STATUS section above for the assignments this responder/officer is authorised for.
+- "offline status" / "sync status" — Read the OFFLINE / SYNC STATUS section and explain that the local on-device queue stores pending reports until the server confirms via the SYNCED (SERVER RECEIVED) badge.
+
+The chatbot UI MUST stay unchanged; only the backend intelligence is extended.
 `
 
     console.log('[ai/chat] AI request started')

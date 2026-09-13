@@ -21,6 +21,7 @@ import {
 import { CommandMap } from '@/components/shared/command-map'
 import { ResourceTrackingCard } from '@/components/shared/resource-tracking-card'
 import { WeatherCard } from '@/components/shared/weather-card'
+import { RescueRouteCard } from '@/components/features/rescue-route-card'
 import type { Incident, Resource, Approval, DashboardEvent, IncidentStatus, RiskLevel, ResourceStatus } from '@/lib/types'
 
 interface EmailStatusEntry {
@@ -421,7 +422,7 @@ export function IncidentDetailView() {
                   <span className="text-xs text-muted-foreground">· {RESOURCE_TYPE_LABELS[assignedResource.type]} · capacity {assignedResource.capacity}</span>
                 </div>
               )}
-              <div className="grid grid-cols-4 gap-2 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                 <TrackingCell label="Assigned" at={incident.assignedAt} />
                 <TrackingCell label="Acknowledged" at={incident.acknowledgedAt} />
                 <TrackingCell label="On scene" at={incident.arrivedAt} />
@@ -448,6 +449,11 @@ export function IncidentDetailView() {
 
         {/* Resource & Logistics Tracking (GO LIVE / NAVIGATE + lifecycle) */}
         <ResourceTrackingCard incident={incident} resources={resources} onConfirmArrival={confirmArrival} />
+
+        {/* 5 NEW: Dynamic Rescue Route (FEATURE 4) — only when a resource is assigned */}
+        {assignedResource && (
+          <RescueRouteCard incident={incident} resource={assignedResource} onConfirmArrival={confirmArrival} />
+        )}
 
         {/* Timeline */}
         <Card>

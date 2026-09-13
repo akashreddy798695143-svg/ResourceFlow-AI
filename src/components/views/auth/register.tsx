@@ -117,7 +117,7 @@ export function RegisterView() {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Top utility bar */}
-      <div className="w-full flex items-center justify-between px-4 py-3 border-b border-border/60 bg-card/40 backdrop-blur z-20">
+      <div className="w-full flex items-center justify-between gap-2 px-3 sm:px-4 py-3 border-b border-border/60 bg-card/40 backdrop-blur z-20">
         <button
           onClick={() => navigate('/')}
           className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors font-medium"
@@ -135,8 +135,8 @@ export function RegisterView() {
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 py-8">
-        <div className="w-full max-w-[450px]">
+      <div className="flex-1 flex items-center justify-center px-3 py-8 sm:px-6">
+        <div className="w-full min-w-0 max-w-[450px]">
           {/* Mobile brand header */}
           <div className="flex items-center justify-center gap-2.5 mb-6">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/25">

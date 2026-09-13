@@ -8,6 +8,7 @@ import { ResourceStatusBadge } from '@/components/shared/badges'
 import dynamic from 'next/dynamic'
 import type { Incident, Resource, ResourceStatus } from '@/lib/types'
 import { haversineKm } from '@/lib/agents/resource-agent'
+import { cn } from '@/lib/utils'
 
 const ResourceTrackerMap = dynamic(
   () => import('@/components/shared/resource-tracker-map'),
@@ -62,37 +63,41 @@ export function ResourceTrackingCard({
       </CardHeader>
       <CardContent className="p-4 space-y-3">
         {/* Status progression bar */}
-        <div className="flex items-center justify-between text-[10px] font-mono uppercase text-muted-foreground">
+        <div className="overflow-x-auto rf-scroll -mx-1 px-1">
+        <div className="flex items-center justify-between gap-0.5 text-[10px] font-mono uppercase text-muted-foreground min-w-[520px] sm:min-w-0">
           {STATUS_FLOW.map((s, i) => {
             const done = i <= currentStep
             const isLast = i === STATUS_FLOW.length - 1
             return (
               <Fragment key={s.key}>
-                <div className="flex flex-col items-center">
+                <div className="flex flex-col items-center shrink-0">
                   <div className={`h-2.5 w-2.5 rounded-full border border-white ${done ? 'bg-primary' : 'bg-muted'}`} />
-                  <span className={done ? 'text-primary font-medium' : ''} style={{ fontSize: 9 }}>{s.label}</span>
+                  <span className={`whitespace-nowrap ${done ? 'text-primary font-medium' : ''}`} style={{ fontSize: 9 }}>{s.label}</span>
                 </div>
-                {!isLast && <div className="flex-1 h-0.5" style={{ background: done ? '#3b82f6' : '#e5e7eb', opacity: done ? 0.6 : 0.4 }} />}
+                {!isLast && <div className="flex-1 min-w-3 h-0.5" style={{ background: done ? '#3b82f6' : '#e5e7eb', opacity: done ? 0.6 : 0.4 }} />}
               </Fragment>
             )
           })}
         </div>
+        </div>
 
         {assigned ? (
           <>
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-sm flex-wrap min-w-0">
                 <span className="font-mono text-emerald-500">{assigned.resourceCode}</span>
-                <strong>{assigned.name}</strong>
+                <strong className="truncate">{assigned.name}</strong>
                 <ResourceStatusBadge status={assigned.status as ResourceStatus} />
               </div>
               <Button
                 size="sm"
                 variant={live ? 'default' : 'outline'}
                 onClick={() => setLive((v) => !v)}
-                className={live ? 'bg-primary text-primary-foreground' : ''}
+                className={cn('shrink-0', live ? 'bg-primary text-primary-foreground' : '')}
               >
-                {live ? <Pause className="h-3.5 w-3.5 mr-1" /> : <Play className="h-3.5 w-3.5 mr-1" />} {live ? 'GO LIVE' : 'GO LIVE / NAVIGATE'}
+                {live ? <Pause className="h-3.5 w-3.5 sm:mr-1" /> : <Play className="h-3.5 w-3.5 sm:mr-1" />}
+                <span className="hidden sm:inline">{live ? 'GO LIVE' : 'GO LIVE / NAVIGATE'}</span>
+                <span className="sm:hidden">{live ? 'Live' : 'Go Live'}</span>
               </Button>
             </div>
 

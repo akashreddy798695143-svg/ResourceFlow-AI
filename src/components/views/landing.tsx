@@ -37,22 +37,22 @@ export function LandingView() {
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Nav */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/85 backdrop-blur-md supports-[backdrop-filter]:bg-card/75">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-15 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/20">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 h-15 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/20">
               <RadioTower className="h-5 w-5" />
             </div>
-            <div className="flex flex-col leading-none">
-              <span className="text-sm font-bold tracking-wider">RESOURCEFLOW AI</span>
-              <span className="text-[10px] text-muted-foreground font-mono">Autonomous Disaster Coordination</span>
+            <div className="hidden min-[380px]:flex flex-col leading-none min-w-0">
+              <span className="text-sm font-bold tracking-wider whitespace-nowrap">RESOURCEFLOW AI</span>
+              <span className="hidden sm:block text-[10px] text-muted-foreground font-mono truncate">Autonomous Disaster Coordination</span>
             </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <ThemeToggle size="sm" />
-            <Button variant="ghost" size="sm" onClick={() => navigate('/login')} className="text-xs font-medium">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/login')} className="text-xs font-medium h-9 px-2.5 sm:px-3">
               Sign in
             </Button>
-            <Button size="sm" onClick={() => navigate('/register')} className="text-xs font-medium shadow-sm">
+            <Button size="sm" onClick={() => navigate('/register')} className="text-xs font-medium shadow-sm h-9 px-2.5 sm:px-3 whitespace-nowrap">
               Get Started
             </Button>
           </div>

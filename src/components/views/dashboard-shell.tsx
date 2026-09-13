@@ -10,7 +10,7 @@ import {
   ShieldAlert, LayoutDashboard, Map, Package, CheckSquare, FlaskConical,
   BarChart3, ScrollText, Settings, LogOut, Bell, Plus, Search, RadioTower,
   AlertTriangle, Menu, X, Activity, ChevronRight, Brain, LifeBuoy, Users, HandHeart,
-  MessageCircle,
+  MessageCircle, Radar,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -40,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Resources', path: '/resources', icon: Package, roles: ['DISASTER_OFFICER', 'ADMIN', 'RESPONDER'] },
   { label: 'Citizen Intel', path: '/citizen-intel', icon: Users, roles: ['DISASTER_OFFICER', 'ADMIN'] },
   { label: 'Approvals', path: '/approvals', icon: CheckSquare, roles: ['DISASTER_OFFICER', 'ADMIN'] },
+  { label: 'Response Intel', path: '/response-intel', icon: Radar, roles: ['DISASTER_OFFICER', 'ADMIN'] },
   { label: 'AI Intelligence', path: '/ai-center', icon: Brain, roles: ['DISASTER_OFFICER', 'ADMIN', 'RESPONDER', 'CITIZEN'] },
   { label: 'Analytics', path: '/analytics', icon: BarChart3, roles: ['DISASTER_OFFICER', 'ADMIN'] },
   { label: 'Simulation', path: '/simulation', icon: FlaskConical, roles: ['DISASTER_OFFICER', 'ADMIN'] },
@@ -135,11 +136,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Top bar */}
       <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-        <div className="flex h-14 items-center gap-3 px-3 md:px-5">
+        <div className="flex h-14 items-center gap-1.5 sm:gap-3 px-2 sm:px-3 md:px-5">
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className="md:hidden shrink-0"
             onClick={() => setSidebarOpen((v) => !v)}
             aria-label="Toggle sidebar"
           >
@@ -147,7 +148,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </Button>
           <button
             onClick={() => navigate(user?.role === 'CITIZEN' ? '/citizen-dashboard' : '/command-center')}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 shrink-0"
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
               <RadioTower className="h-4 w-4" />
@@ -183,7 +184,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </Button>
           )}
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-0.5 sm:gap-2 shrink-0">
             {/* Realtime status */}
             <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border/60 bg-muted/40">
               <span className={cn('h-2 w-2 rounded-full', connected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500')} />
@@ -207,7 +208,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-1.5rem)]">
                 <DropdownMenuLabel className="flex items-center justify-between">
                   Notifications
                   <Badge variant="secondary" className="text-[10px]">{unreadCount} unread</Badge>
@@ -270,13 +271,24 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       </header>
 
       {/* Body: sidebar + content */}
-      <div className="flex flex-1 min-h-0">
-        {/* Sidebar */}
+      <div className="flex flex-1 min-h-0 relative">
+        {/* Mobile sidebar backdrop — dismisses the drawer, keeps main content readable */}
+        {sidebarOpen && (
+          <button
+            type="button"
+            aria-label="Close navigation"
+            className="fixed inset-0 top-14 z-30 bg-black/50 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        {/* Sidebar — static column on desktop, overlay drawer on mobile */}
         <aside
           className={cn(
-            'w-56 shrink-0 border-r border-border bg-sidebar text-sidebar-foreground flex flex-col',
-            'md:flex',
-            sidebarOpen ? 'flex' : 'hidden md:flex'
+            'w-56 shrink-0 border-r border-border bg-sidebar text-sidebar-foreground flex flex-col z-40',
+            'md:static md:z-auto md:flex',
+            sidebarOpen
+              ? 'fixed top-14 bottom-0 left-0 flex shadow-xl md:shadow-none'
+              : 'hidden md:flex'
           )}
         >
           <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto rf-scroll">

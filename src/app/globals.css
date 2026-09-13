@@ -120,6 +120,9 @@
   }
   body {
     @apply bg-background text-foreground transition-colors duration-150;
+    /* Safety net: no page-level horizontal scrolling at any width. Breakpoints
+       and wrapped grids handle layout; this only catches stray overflow. */
+    overflow-x: clip;
   }
   .dark body {
     /* Disaster-themed animated background for command center */
@@ -229,6 +232,12 @@
   .dark .border-sev-MEDIUM { border-color: oklch(0.78 0.16 80 / 0.45); }
   .dark .border-sev-HIGH { border-color: oklch(0.72 0.18 50 / 0.50); }
   .dark .border-sev-CRITICAL { border-color: oklch(0.68 0.24 25 / 0.60); }
+
+  /* Consistent content width + gutters used across every major view.
+     Desktop → 80rem max, tablet → 3rem gutters, mobile → 1rem gutters. */
+  .rf-container {
+    @apply w-full mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
 
   /* Custom scrollbar for long lists */
   .rf-scroll::-webkit-scrollbar { width: 6px; height: 6px; }

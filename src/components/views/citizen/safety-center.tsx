@@ -447,10 +447,10 @@ function GuideSection({ lang, big }: { lang: LanguageCode; big: boolean }) {
         <CardTitle className="flex items-center gap-2 text-sm"><Zap className="h-4 w-4 text-amber-500" />{t.safetyGuide}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {TYPES.map(({ v, icon: Icon }) => (
-            <Button key={v} size={big ? 'lg' : 'sm'} variant={type === v ? 'default' : 'outline'} onClick={() => setType(v)} className="gap-1.5">
-              <Icon className="h-3.5 w-3.5" />{v}
+            <Button key={v} size={big ? 'lg' : 'sm'} variant={type === v ? 'default' : 'outline'} onClick={() => setType(v)} className="gap-1.5 h-auto min-h-9 py-1.5 whitespace-normal text-center leading-tight">
+              <Icon className="h-3.5 w-3.5 shrink-0" />{v}
             </Button>
           ))}
         </div>
