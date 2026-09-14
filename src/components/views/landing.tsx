@@ -38,16 +38,16 @@ export function LandingView() {
       {/* Nav */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/85 backdrop-blur-md supports-[backdrop-filter]:bg-card/75">
         <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 h-15 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/20">
               <RadioTower className="h-5 w-5" />
             </div>
             <div className="hidden min-[380px]:flex flex-col leading-none min-w-0">
-              <span className="text-sm font-bold tracking-wider whitespace-nowrap">RESOURCEFLOW AI</span>
+              <span className="text-sm font-bold tracking-wider whitespace-nowrap truncate">RESOURCEFLOW AI</span>
               <span className="hidden sm:block text-[10px] text-muted-foreground font-mono truncate">Autonomous Disaster Coordination</span>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 ml-auto">
             <ThemeToggle size="sm" />
             <Button variant="ghost" size="sm" onClick={() => navigate('/login')} className="text-xs font-medium h-9 px-2.5 sm:px-3">
               Sign in
@@ -67,32 +67,32 @@ export function LandingView() {
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20 w-full z-10">
           <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-center">
             {/* Left Column: Hero Typography and Action Triggers */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/25 border border-amber-400/50 text-amber-200 text-xs font-bold tracking-wide backdrop-blur-xs">
-                <Activity className="h-3.5 w-3.5 animate-pulse text-amber-400" />
-                <span className="rf-hero-text">AI-POWERED DISASTER RESPONSE · REAL-TIME COORDINATION</span>
+            <div className="lg:col-span-7 space-y-5 sm:space-y-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/25 border border-amber-400/50 text-amber-100 text-[11px] sm:text-xs font-bold tracking-wide backdrop-blur-sm rf-hero-text max-w-full">
+                <Activity className="h-3.5 w-3.5 shrink-0 animate-pulse text-amber-400" />
+                <span className="leading-tight">AI-POWERED DISASTER RESPONSE · REAL-TIME COORDINATION</span>
               </div>
 
               <div>
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.08] text-white rf-hero-text drop-shadow-md">
-                  RESOURCEFLOW <span className="text-amber-400">AI</span>
+                <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.08] text-white rf-hero-text-strong">
+                  <span className="text-white">RESOURCEFLOW AI</span>
                 </h1>
-                <p className="mt-3 text-xl sm:text-2xl font-bold text-white tracking-tight rf-hero-text drop-shadow-sm">
+                <p className="mt-3 text-lg sm:text-2xl font-extrabold text-white tracking-tight rf-hero-text">
                   From Emergency Signals to Coordinated Action.
                 </p>
               </div>
 
-              <p className="text-sm sm:text-base text-slate-100 leading-relaxed max-w-2xl font-semibold rf-hero-text">
+              <p className="text-sm sm:text-base text-white leading-relaxed max-w-2xl font-bold rf-hero-text rounded-lg px-3 py-2.5 -mx-3 sm:px-4 sm:py-3 sm:-mx-4" style={{ background: 'rgba(3, 9, 20, 0.68)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.10)' }}>
                 A mission-critical disaster management platform that converts unstructured crisis reports into an explainable,
                 audited response workflow — from citizen alerts through AI triage, hazard risk scoring, multi-agency resource optimization,
                 human officer approval, and live responder dispatch.
               </p>
 
               {/* Action Buttons: Emergency Reporting, Command Center, Live Demo */}
-              <div className="flex flex-wrap items-center gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 pt-2">
                 <Button
                   size="lg"
-                  className="gap-2 bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30 font-bold text-sm h-11 px-5 tracking-wide"
+                  className="gap-2 w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-950/40 ring-1 ring-red-400/40 font-extrabold text-sm h-11 px-5 tracking-wide rf-hero-text"
                   onClick={() => navigate('/report-incident')}
                 >
                   <AlertTriangle className="h-4 w-4" />
@@ -102,7 +102,7 @@ export function LandingView() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="gap-2 font-bold text-sm h-11 px-5 bg-slate-900/60 hover:bg-slate-800/80 text-white border-white/30 backdrop-blur-xs shadow-sm tracking-wide rf-hero-text"
+                  className="gap-2 w-full sm:w-auto font-extrabold text-sm h-11 px-5 bg-slate-900/90 hover:bg-slate-800/95 text-white border-white/70 backdrop-blur-xl shadow-lg shadow-black/50 ring-1 ring-white/15 tracking-wide rf-hero-text"
                   onClick={() => navigate('/command-center')}
                 >
                   <RadioTower className="h-4 w-4 text-amber-400" />
@@ -111,7 +111,7 @@ export function LandingView() {
 
                 <Button
                   size="lg"
-                  className="gap-2 font-bold text-sm h-11 px-5 bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md shadow-amber-500/20 tracking-wide"
+                  className="gap-2 w-full sm:w-auto font-extrabold text-sm h-11 px-5 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/30 ring-1 ring-amber-300/50 tracking-wide"
                   onClick={seedAndLogin}
                   disabled={seeding}
                 >
@@ -121,7 +121,7 @@ export function LandingView() {
               </div>
 
               {/* Operational capability badges */}
-              <div className="pt-2 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-white font-mono font-bold">
+              <div className="pt-2 flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] sm:text-xs text-white font-mono font-bold rounded-lg px-3 py-2 -mx-3" style={{ background: 'rgba(3, 9, 20, 0.62)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
                 <span className="flex items-center gap-1.5 rf-hero-text">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
                   Sub-second Hazard Triage
@@ -139,32 +139,32 @@ export function LandingView() {
             </div>
 
             {/* Right Column: Workflow Telemetry Visual */}
-            <div className="lg:col-span-5 relative">
+            <div className="lg:col-span-5 relative w-full min-w-0">
               <div
-                className="rounded-xl overflow-hidden shadow-2xl shadow-black/50 transition-all border"
+                className="w-full rounded-xl overflow-hidden shadow-2xl shadow-black/70 transition-all border"
                 style={{
-                  background: 'rgba(5, 12, 24, 0.78)',
-                  borderColor: 'rgba(255, 255, 255, 0.14)',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
+                  background: 'rgba(7, 14, 27, 0.88)',
+                  borderColor: 'rgba(255, 255, 255, 0.30)',
+                  backdropFilter: 'blur(20px) saturate(130%)',
+                  WebkitBackdropFilter: 'blur(20px) saturate(130%)',
                 }}
               >
                 <div
                   className="p-3.5 border-b flex items-center justify-between"
                   style={{
-                    borderColor: 'rgba(255, 255, 255, 0.10)',
-                    background: 'rgba(255, 255, 255, 0.03)',
+                    borderColor: 'rgba(255, 255, 255, 0.16)',
+                    background: 'rgba(255, 255, 255, 0.06)',
                   }}
                 >
                   <div className="text-xs font-mono tracking-wider uppercase flex items-center gap-2 text-white font-bold">
                     <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                    CORE DISASTER WORKFLOW
+                    <span className="text-white">CORE DISASTER WORKFLOW</span>
                   </div>
-                  <Badge variant="outline" className="text-[10px] font-mono font-bold text-amber-300 border-amber-400/50 bg-amber-500/20">
+                  <Badge variant="outline" className="text-[10px] font-mono font-extrabold text-white border-white/70 bg-amber-500/25 rf-hero-text">
                     LIVE PIPELINE
                   </Badge>
                 </div>
-                <div className="p-3.5 space-y-1.5 font-mono text-xs">
+                <div className="p-3.5 space-y-1.5 font-mono text-xs rf-hero-panel">
                   {[
                     { step: 'REPORT', desc: 'Multi-lingual citizen SOS & voice signal' },
                     { step: 'AI UNDERSTANDS', desc: 'Gemini extraction of needs & road blockages' },
@@ -178,18 +178,18 @@ export function LandingView() {
                     { step: 'RESPONSE ADAPTS', desc: 'Autonomous re-routing & dynamic alternatives' },
                     { step: 'INCIDENT RESOLVED', desc: 'Post-incident report & learning loop' },
                   ].map((item, i, arr) => (
-                    <div key={item.step} className="flex items-center gap-2.5 p-1 rounded hover:bg-white/10 transition-colors">
-                      <div className="flex h-5 w-5 items-center justify-center rounded bg-amber-500/25 text-amber-300 text-[10px] font-bold shrink-0 border border-amber-400/30">
+                    <div key={item.step} className="flex items-center gap-2.5 p-1 rounded hover:bg-white/10 transition-colors min-w-0">
+                      <div className="flex h-5 w-5 items-center justify-center rounded bg-amber-500/30 text-amber-200 text-[10px] font-bold shrink-0 border border-amber-300/50">
                         {String(i + 1).padStart(2, '0')}
                       </div>
-                      <span className="font-bold text-white text-[11px] shrink-0 tracking-wide">
+                      <span className="font-extrabold text-white text-[11px] shrink-0 tracking-wide rf-hero-text">
                         {item.step}
                       </span>
-                      <span className="text-[10px] text-slate-100 font-medium truncate hidden sm:inline">
+                      <span className="text-[10px] text-white font-semibold truncate hidden sm:inline min-w-0 rf-hero-text">
                         — {item.desc}
                       </span>
                       {i < arr.length - 1 && (
-                        <div className="ml-auto text-slate-400/50 text-[10px]">↓</div>
+                        <div className="ml-auto shrink-0 text-white/85 text-[10px]">↓</div>
                       )}
                     </div>
                   ))}

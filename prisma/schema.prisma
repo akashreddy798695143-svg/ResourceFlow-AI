@@ -300,6 +300,11 @@ model Incident {
   safeZones                                          SafeZone[]
   shipments                                          Shipment[]
   VolunteerAssignment                                VolunteerAssignment[]
+  // Game-changer relations
+  SituationBrief                                     SituationBrief[]
+  IncidentTask                                       IncidentTask[]
+  EmergencyBroadcast                                 EmergencyBroadcast[]
+  ResponseBottleneck                                 ResponseBottleneck[]
 
   // The reporter (FK) — always from session, never from frontend
   @@index([status])
@@ -485,6 +490,7 @@ model ChatMessage {
   createdAt      DateTime         @default(now())
   conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User             @relation("ChatMessagesSent", fields: [senderId], references: [id])
+  translations   MessageTranslation[]
 
   @@index([conversationId, createdAt])
   @@index([senderId])
@@ -664,6 +670,8 @@ model Resource {
   resourceTrackingEvents ResourceTrackingEvent[]
   resourceDestinations   ResourceDestination[]
   locationUpdates        ResponderLocationUpdate[]
+  IncidentTask           IncidentTask[]
+  ResponseBottleneck     ResponseBottleneck[]
 
   @@index([status])
   @@index([type])
@@ -863,6 +871,11 @@ model User {
   VerifiedAlert          VerifiedAlert[]
   VolunteerRegistration  VolunteerRegistration?
   WhatIfRun              WhatIfRun[]
+  // Game-changer relations
+  MessageTranslation     MessageTranslation[]
+  IncidentTask           IncidentTask[]
+  EmergencyBroadcast     EmergencyBroadcast[]
+  BroadcastDelivery      EmergencyBroadcastDelivery[]
 
   @@index([phone])
 }
@@ -974,6 +987,190 @@ model WhatIfRun {
   User        User?    @relation(fields: [createdById], references: [id])
 
   @@index([createdAt])
+}
+
+// ─── GAME-CHANGER #2 — AI COMMUNICATION TRANSLATOR ───────────────────────
+// Stores an AI translation ALONGSIDE the original chat message. The original
+// ChatMessage.body is never overwritten; a translation is an additive artifact
+// that is clearly labelled as AI-generated.
+model MessageTranslation {
+  id           String      @id @default(cuid())
+  messageId    String
+  sourceLang   String // ISO 639-1 detected/declared source language
+  targetLang   String // ISO 639-1 requested translation language
+  translated   String // the AI translation text
+  // 'ai' when produced by Gemini, 'unavailable' when AI could not be reached
+  // (the UI must then show the original only — never a fabricated translation).
+  source       String      @default("ai")
+  confidence   Float?
+  requestedById String?
+  createdAt    DateTime    @default(now())
+  ChatMessage  ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  User         User?       @relation(fields: [requestedById], references: [id])
+
+  @@unique([messageId, targetLang])
+  @@index([messageId])
+}
+
+// ─── GAME-CHANGER #4/#10 — AI SITUATION BRIEF + 30-SEC COMMAND BRIEFING ──
+// Each row is an immutable, auditable snapshot of an AI-generated briefing.
+// `content` holds the structured brief; `inputHash` lets us skip regeneration
+// when nothing material changed (performance requirement).
+model SituationBrief {
+  id         String    @id @default(cuid())
+  incidentId String
+  // BRIEF = full situation brief, COMMAND = 30-second command briefing
+  kind       String    @default("BRIEF")
+  summary    String
+  content    Json
+  source     String    @default("ai")
+  inputHash  String?
+  createdAt  DateTime  @default(now())
+  Incident   Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, kind, createdAt])
+}
+
+// ─── GAME-CHANGER #8 — AI TASK ASSIGNMENT ────────────────────────────────
+// An incident is broken into discrete actionable tasks. AI recommends the
+// task→resource mapping; a human officer approves critical assignments.
+model IncidentTask {
+  id           String    @id @default(cuid())
+  incidentId   String
+  title        String
+  description  String?
+  // The task category drives which resource types are eligible.
+  category     String // RESCUE, MEDICAL, WATER, FOOD, ROUTE_CLEARANCE, SHELTER, MONITORING, OTHER
+  priority     Int       @default(3) // 1 = highest
+  status       String    @default("PENDING") // PENDING, ASSIGNED, ACCEPTED, IN_PROGRESS, BLOCKED, COMPLETED
+  requiredResourceType String?
+  assignedResourceId String?
+  assignedById String?
+  approvedById String?
+  approvedAt   DateTime?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  blockedReason String?
+  // 'ai' | 'officer' | 'system' — who created the task
+  source       String    @default("ai")
+  reasoning    String?
+  createdById  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now())
+  Incident     Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  Resource     Resource? @relation(fields: [assignedResourceId], references: [id])
+  User         User?     @relation(fields: [createdById], references: [id])
+
+  @@index([incidentId, status])
+  @@index([assignedResourceId])
+}
+
+// ─── GAME-CHANGER #7 — IMPACT-ZONE EMERGENCY BROADCAST ───────────────────
+// Location-scoped emergency notification sent by authorized officers/admins.
+// Delivery is tracked per recipient; nothing is broadcast to unrelated users.
+model EmergencyBroadcast {
+  id            String    @id @default(cuid())
+  broadcastCode String    @unique
+  title         String
+  body          String
+  severity      Severity  @default(HIGH)
+  // Location-scoping: centre + radius, plus an optional free-text area label.
+  latitude      Float
+  longitude     Float
+  radiusKm      Float     @default(5)
+  areaLabel     String?
+  safetyInstructions String?
+  evacuationInfo String?
+  safePlaceInfo  String?
+  incidentId    String?
+  status        String    @default("ACTIVE") // ACTIVE, EXPIRED, CANCELLED
+  expiresAt     DateTime?
+  recipientCount Int      @default(0)
+  sentCount     Int       @default(0)
+  failedCount   Int       @default(0)
+  source        String    @default("officer")
+  createdById   String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now())
+  Incident      Incident? @relation(fields: [incidentId], references: [id])
+  User          User      @relation(fields: [createdById], references: [id])
+  Deliveries    EmergencyBroadcastDelivery[]
+
+  @@index([status, createdAt])
+  @@index([incidentId])
+}
+
+// Per-recipient broadcast delivery record (delivery status is never faked).
+model EmergencyBroadcastDelivery {
+  id          String             @id @default(cuid())
+  broadcastId String
+  userId      String
+  // PENDING, DELIVERED, FAILED
+  status      String             @default("PENDING")
+  channel     String             @default("IN_APP")
+  distanceKm  Float?
+  deliveredAt DateTime?
+  readAt      DateTime?
+  errorMessage String?
+  createdAt   DateTime           @default(now())
+  Broadcast   EmergencyBroadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  User        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([broadcastId, userId, channel])
+  @@index([userId, status])
+}
+
+// ─── GAME-CHANGER #6 — COMMUNICATION HEALTH ──────────────────────────────
+// Point-in-time communication-health sample. Used to report LIVE / DELAYED /
+// OFFLINE honestly instead of claiming real-time connectivity we do not have.
+model CommunicationStatus {
+  id                String   @id @default(cuid())
+  // GLOBAL, or scoped to an incident / user
+  scope             String   @default("GLOBAL")
+  scopeId           String?
+  // LIVE, DELAYED, OFFLINE
+  state             String   @default("LIVE")
+  internetOnline    Boolean  @default(true)
+  websocketConnected Boolean @default(false)
+  gpsAvailable      Boolean  @default(false)
+  apiReachable      Boolean  @default(true)
+  lastSuccessfulUpdate DateTime?
+  notificationDelivery String @default("UNKNOWN") // OK, DEGRADED, FAILED, UNKNOWN
+  latencyMs         Int?
+  details           Json?
+  createdAt         DateTime @default(now())
+
+  @@index([scope, scopeId, createdAt])
+}
+
+// ─── GAME-CHANGER #9 — RESPONSE BOTTLENECK DETECTOR ──────────────────────
+// A detected operational bottleneck with an AI recommendation. Only an
+// officer can act on it — AI never auto-executes.
+model ResponseBottleneck {
+  id           String    @id @default(cuid())
+  incidentId   String
+  resourceId   String?
+  // RESPONDER_STALLED, GPS_UNAVAILABLE, ROAD_BLOCKED, RESOURCE_DELAYED,
+  // NO_RESOURCE_ASSIGNED, AMBULANCE_UNAVAILABLE, COMMS_LOST,
+  // RESOURCE_CONTENTION, ETA_INCREASING, SITUATION_WORSENING
+  kind         String
+  severity     Severity  @default(HIGH)
+  title        String
+  detail       String
+  recommendedAction String
+  // OPEN, ACKNOWLEDGED, RESOLVED, DISMISSED
+  status       String    @default("OPEN")
+  detectedBy   String    @default("ai")
+  resolvedById String?
+  resolvedAt   DateTime?
+  resolutionNote String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now())
+  Incident     Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  Resource     Resource? @relation(fields: [resourceId], references: [id])
+
+  @@index([incidentId, status])
+  @@index([status, severity])
 }
 
 enum ApprovalDecision {

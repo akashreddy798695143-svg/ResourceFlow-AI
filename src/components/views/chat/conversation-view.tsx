@@ -16,6 +16,8 @@ import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
+import { MessageTranslationControl } from '@/components/features/message-translation-control'
+import { Languages } from 'lucide-react'
 import type { ChatConversation, ChatMessage, ChatParticipant } from '@/lib/types'
 
 const ROLE_LABEL: Record<string, string> = {
@@ -96,8 +98,11 @@ function LocationPreview({
 interface BubbleProps {
   msg: ChatMessage
   isOwn: boolean
+  // When set, incoming messages are auto-offered in this language so a Telugu or
+  // Hindi speaker's message arrives already readable for an English officer.
+  preferredLang?: string
 }
-function MessageBubble({ msg, isOwn }: BubbleProps) {
+function MessageBubble({ msg, isOwn, preferredLang }: BubbleProps) {
   const sender = msg.sender
   return (
     <div className={cn('flex max-w-[80%] flex-col gap-1', isOwn ? 'self-end' : 'self-start')}>
@@ -145,6 +150,17 @@ function MessageBubble({ msg, isOwn }: BubbleProps) {
           <p className="whitespace-pre-wrap break-words">{msg.body || ''}</p>
         )}
       </Card>
+
+      {/* GAME-CHANGER #2: AI translation. Offered on TEXT messages only, and the
+          original bubble above is never replaced — the translation is additive. */}
+      {msg.kind === 'TEXT' && msg.body && msg.body.trim().length > 0 && (
+        <MessageTranslationControl
+          messageId={msg.id}
+          originalText={msg.body}
+          preferredLang={preferredLang}
+        />
+      )}
+
       <span className="text-[9px] text-muted-foreground/60">{formatTime(msg.createdAt)}</span>
     </div>
   )
@@ -157,6 +173,8 @@ export function ChatConversationView({ conversationId }: { conversationId: strin
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  // GAME-CHANGER #2: the language incoming messages are offered in.
+  const [preferredLang, setPreferredLang] = useState('en')
   const [text, setText] = useState('')
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -295,6 +313,21 @@ export function ChatConversationView({ conversationId }: { conversationId: strin
               </div>
               <span className="text-[10px] text-muted-foreground">Emergency chat — secure & role-gated</span>
             </div>
+
+            {/* GAME-CHANGER #2: choose the language translations are offered in. */}
+            <div className="flex items-center gap-1 shrink-0">
+              <Languages className="h-3.5 w-3.5 text-muted-foreground" />
+              <select
+                value={preferredLang}
+                onChange={(e) => setPreferredLang(e.target.value)}
+                className="rounded-md border-border bg-background px-1.5 py-1 text-[10px] font-mono"
+                aria-label="Translation language"
+              >
+                <option value="en">English</option>
+                <option value="te">తెలుగు</option>
+                <option value="hi">हिन्दी</option>
+              </select>
+            </div>
           </>
         ) : (
           <span className="text-sm text-muted-foreground">Loading conversation…</span>
@@ -307,7 +340,12 @@ export function ChatConversationView({ conversationId }: { conversationId: strin
           <div className="py-10 text-center text-sm text-muted-foreground">Loading messages…</div>
         ) : (
           messages.map((m) => (
-            <MessageBubble key={m.id} msg={m} isOwn={m.senderId === user?.id} />
+            <MessageBubble
+              key={m.id}
+              msg={m}
+              isOwn={m.senderId === user?.id}
+              preferredLang={m.senderId === user?.id ? undefined : preferredLang}
+            />
           ))
         )}
         <div ref={bottomRef} />

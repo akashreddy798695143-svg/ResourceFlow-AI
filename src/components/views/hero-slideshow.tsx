@@ -177,7 +177,7 @@ export function HeroBackgroundSlideshow() {
           <div
             key={slide.id}
             className={cn(
-              'absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out filter contrast-105 brightness-95',
+              'absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out contrast-105',
               isActive ? 'opacity-100 z-10 rf-hero-kenburns' : 'opacity-0 z-0 pointer-events-none'
             )}
             style={{ backgroundImage: `url('${activeUrl}')` }}
@@ -186,21 +186,31 @@ export function HeroBackgroundSlideshow() {
         )
       })}
 
-      {/* Subtle adaptive gradient — local scrim behind the hero content only (content sits above this on z-10).
-          Layer order: background image → gradient → hero content / workflow panel. */}
+      {/* Localized readability scrim — confined to the left text column on large screens so the
+          disaster photograph stays clearly visible on the right. Layer order:
+          background image → localized gradient → hero content / workflow panel. */}
       <div
-        className="absolute inset-0 z-20 pointer-events-none"
+        className="absolute inset-0 z-20 pointer-events-none hidden lg:block"
         style={{
           background:
-            'linear-gradient(90deg, rgba(3, 8, 18, 0.58) 0%, rgba(3, 8, 18, 0.35) 50%, rgba(3, 8, 18, 0.48) 100%)',
+            'linear-gradient(90deg, rgba(2, 7, 16, 0.78) 0%, rgba(2, 7, 16, 0.66) 30%, rgba(2, 7, 16, 0.48) 52%, rgba(3, 8, 18, 0.22) 68%, rgba(3, 8, 18, 0.06) 82%, transparent 100%)',
         }}
       />
-      {/* Subtle vertical blend with navbar and bottom boundary */}
+      {/* Mobile / tablet: text and workflow card stack vertically, so the localized gradient
+          follows the full column height instead of darkening the whole image. */}
+      <div
+        className="absolute inset-0 z-20 pointer-events-none lg:hidden"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(2, 7, 16, 0.68) 0%, rgba(2, 7, 16, 0.64) 26%, rgba(2, 7, 16, 0.66) 48%, rgba(2, 7, 16, 0.68) 68%, rgba(2, 7, 16, 0.76) 100%)',
+        }}
+      />
+      {/* Very light vertical blend so the hero meets the navbar and page background cleanly */}
       <div
         className="absolute inset-0 z-20 pointer-events-none"
         style={{
           background:
-            'linear-gradient(180deg, rgba(3, 8, 18, 0.35) 0%, transparent 20%, transparent 80%, rgba(3, 8, 18, 0.42) 100%)',
+            'linear-gradient(180deg, rgba(2, 7, 16, 0.22) 0%, transparent 14%, transparent 88%, rgba(2, 7, 16, 0.24) 100%)',
         }}
       />
     </div>

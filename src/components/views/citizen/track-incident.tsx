@@ -14,6 +14,12 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { IncidentTypeBadge, StatusBadge } from '@/components/shared/badges'
 import { cn } from '@/lib/utils'
+import {
+  QuickEmergencyActions,
+  CommunicationHealthStrip,
+} from '@/components/features/quick-emergency-actions'
+import { ResponderTrackingCard } from '@/components/features/responder-tracking-card'
+import { SituationBriefCard } from '@/components/features/situation-brief-card'
 
 interface Stage {
   key: string
@@ -25,6 +31,7 @@ interface Stage {
 }
 
 interface TrackResult {
+  incidentId: string
   incidentCode: string
   type: string
   status: string
@@ -48,6 +55,27 @@ interface TrackResult {
     arrivedAt: string | null
     resolvedAt: string | null
   }
+  // GAME-CHANGER #5: the responder assigned to THIS incident, with an honest
+  // live/ETA state. Null when nothing is assigned yet.
+  responder: {
+    assigned: boolean
+    status: string | null
+    code: string | null
+    name: string | null
+    type: string | null
+    etaMinutes: number | null
+    distanceKm: number | null
+    live: boolean
+    trackingState: string
+    trackingLabel: string
+    lastAuthorizedUpdate: {
+      latitude: number
+      longitude: number
+      accuracy: number | null
+      timestamp: string
+    } | null
+    destination: { latitude: number; longitude: number; name: string }
+  } | null
 }
 
 export function TrackIncidentView() {
@@ -215,6 +243,22 @@ export function TrackIncidentView() {
                 <p className="text-xs mt-0.5">{result.publicMessage}</p>
               </div>
             </div>
+
+            {/* GAME-CHANGER #6: honest communication status */}
+            <CommunicationHealthStrip incidentId={result.incidentId} />
+
+            {/* GAME-CHANGER #4: plain-language situation brief for the citizen */}
+            <SituationBriefCard incidentId={result.incidentId} citizenView />
+
+            {/* GAME-CHANGER #5: assigned responder, live state and ETA */}
+            <ResponderTrackingCard responder={result.responder} />
+
+            {/* GAME-CHANGER #1: one-tap structured updates for this incident */}
+            <QuickEmergencyActions
+              incidentId={result.incidentId}
+              incidentCode={result.incidentCode}
+              compact
+            />
 
             {/* Visual stage timeline (✓ / ○) */}
             <div>

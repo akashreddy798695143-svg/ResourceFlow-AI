@@ -15,6 +15,11 @@ import type { Incident, IncidentStatus, RiskLevel, DashboardEvent } from '@/lib/
 import { EmergencyServices } from '@/components/shared/emergency-services'
 import { NearestHelpCard } from '@/components/features/nearest-help-card'
 import { OfflineQueueStatus } from '@/components/features/offline-queue-status'
+import {
+  QuickEmergencyActions,
+  CommunicationHealthStrip,
+} from '@/components/features/quick-emergency-actions'
+import { BroadcastInbox } from '@/components/features/broadcast-inbox'
 
 export function CitizenDashboardView() {
   const { navigate } = useRouter()
@@ -61,6 +66,9 @@ export function CitizenDashboardView() {
   const total = incidents.length
   const active = incidents.filter((i) => !['RESOLVED', 'CLOSED'].includes(i.status)).length
   const resolved = incidents.filter((i) => ['RESOLVED', 'CLOSED'].includes(i.status)).length
+  // The most recent still-open incident is what the quick actions and health
+  // strip operate on — that is the one the citizen is actively affected by.
+  const activeIncidentId = incidents.find((i) => !['RESOLVED', 'CLOSED'].includes(i.status))?.id
 
   const track = (e: React.FormEvent) => {
     e.preventDefault()
@@ -117,6 +125,26 @@ export function CitizenDashboardView() {
           {sosLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Siren className="h-5 w-5" />}
           {sosLoading ? 'Sending SOS…' : 'Emergency SOS'}
         </Button>
+      </div>
+
+      {/* GAME-CHANGER #6: honest communication health for the active incident */}
+      <div className="mb-6">
+        <CommunicationHealthStrip incidentId={activeIncidentId} />
+      </div>
+
+      {/* GAME-CHANGER #1: one-tap structured emergency updates */}
+      {activeIncidentId && (
+        <div className="mb-6">
+          <QuickEmergencyActions
+            incidentId={activeIncidentId}
+            incidentCode={incidents.find((i) => i.id === activeIncidentId)?.incidentCode}
+          />
+        </div>
+      )}
+
+      {/* GAME-CHANGER #7: location-scoped emergency broadcasts for this citizen */}
+      <div className="mb-6">
+        <BroadcastInbox />
       </div>
 
       {/* Track Incident */}

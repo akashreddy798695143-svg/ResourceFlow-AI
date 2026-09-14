@@ -218,19 +218,19 @@ export function AIAssistant() {
         <div className="pointer-events-auto">
           <button
             onClick={() => setOpen(true)}
-            className="group flex items-center gap-2.5 p-3 sm:px-4 sm:py-3 rounded-full bg-slate-900 text-white dark:bg-amber-500 dark:text-slate-950 font-semibold text-xs sm:text-sm shadow-xl shadow-black/25 dark:shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all duration-200 border border-slate-700 dark:border-amber-400/50"
+            className="group flex items-center gap-2.5 p-3 sm:px-4 sm:py-3 rounded-full bg-amber-500 text-slate-950 font-semibold text-xs sm:text-sm shadow-xl shadow-black/40 ring-1 ring-amber-300/60 hover:scale-105 active:scale-95 transition-all duration-200 border border-amber-300/60 hover:bg-amber-400"
             aria-label="Open ResourceFlow AI Assistant"
             title="ResourceFlow AI Assistant"
           >
             <div className="relative flex items-center justify-center">
-              <Sparkles className="h-4 w-4 animate-pulse text-amber-400 dark:text-slate-950" />
+              <Sparkles className="h-4 w-4 animate-pulse text-slate-950" />
               <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
               <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-emerald-500" />
             </div>
             <span className="hidden sm:inline tracking-wide">ResourceFlow AI</span>
             <Badge
               variant="secondary"
-              className="hidden sm:inline-flex bg-slate-800 text-amber-400 dark:bg-slate-950/20 dark:text-slate-950 text-[10px] px-1.5 py-0 font-mono"
+              className="hidden sm:inline-flex bg-slate-950/20 text-slate-950 text-[10px] px-1.5 py-0 font-mono"
             >
               AI
             </Badge>

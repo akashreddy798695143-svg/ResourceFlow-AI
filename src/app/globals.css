@@ -191,14 +191,50 @@
   will-change: transform;
 }
 
-/* Hero readability: thick, sharp foreground text over rotating disaster photography.
-   Adds a soft dark halo so near-white text stays readable on bright OR dark images,
-   without reducing the visibility of the background itself. */
+/* Hero readability: layered directional halo. The tight 1px ring does the work of separating
+   glyphs from busy mid-tones (floodwater, smoke, vehicle lights); the wide soft halo handles
+   bright spots. This keeps near-white text readable on ANY of the 20 rotating photographs
+   WITHOUT darkening the image itself — the scrim stays localized to the text column. */
 .rf-hero-text {
   text-shadow:
-    0 1px 2px rgba(2, 8, 18, 0.9),
-    0 2px 8px rgba(2, 8, 18, 0.75),
-    0 4px 16px rgba(2, 8, 18, 0.55);
+    0 1px 2px rgba(1, 5, 13, 0.95),
+    0 0 6px rgba(1, 5, 13, 0.85),
+    0 2px 14px rgba(1, 5, 13, 0.7),
+    0 4px 22px rgba(1, 5, 13, 0.5);
+}
+
+/* Strongest halo, reserved for the RESOURCEFLOW AI wordmark (largest text on the page). */
+.rf-hero-text-strong {
+  text-shadow:
+    0 1px 2px rgba(1, 5, 13, 1),
+    0 0 8px rgba(1, 5, 13, 0.9),
+    0 2px 16px rgba(1, 5, 13, 0.8),
+    0 6px 30px rgba(1, 5, 13, 0.65);
+}
+
+/* Workflow glass panel: the panel already provides an opaque backing, so text needs only a
+   light halo — enough to firm up edges over the blurred photograph behind the glass. */
+.rf-hero-panel,
+.rf-hero-panel * {
+  text-shadow: 0 1px 2px rgba(1, 5, 13, 0.85);
+}
+
+/* Final hero contrast pass: primary hero copy remains pure white even when a
+   utility class elsewhere supplies a muted slate tone. The localized scrims in
+   hero-slideshow.tsx provide the backing; these rules only strengthen foreground
+   text and do not alter the photograph. */
+.rf-hero-text,
+.rf-hero-text-strong,
+.rf-hero-panel .text-white,
+.rf-hero-panel .text-slate-200,
+.rf-hero-panel .text-slate-300,
+.rf-hero-panel .text-slate-400 {
+  color: #ffffff !important;
+}
+
+.rf-hero-panel .text-amber-200,
+.rf-hero-panel .text-amber-300 {
+  color: #ffffff !important;
 }
 
 /* Severity & status utility colors — high-contrast for both light and dark modes */

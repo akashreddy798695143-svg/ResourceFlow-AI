@@ -26,6 +26,7 @@ import type {
 import { StatusBadge, RiskBadge, IncidentTypeBadge } from '@/components/shared/badges'
 import { CommandMap } from '@/components/shared/command-map'
 import { ResourceConflictCard } from '@/components/features/resource-conflict-card'
+import { OfficerIntelStrip } from '@/components/features/officer/officer-intel-strip'
 
 export function CommandCenterView() {
   const { navigate } = useRouter()
@@ -401,6 +402,15 @@ export function CommandCenterView() {
       <div className="px-3 md:px-6 pb-3">
         <ResourceConflictCard />
       </div>
+
+      {/* GAME-CHANGER INTELLIGENCE STRIP — 30-second command briefing, message
+          priority queue, response bottleneck detector, communication health and
+          impact-zone emergency broadcast. One insertion point keeps the existing
+          command-center layout untouched. */}
+      <OfficerIntelStrip
+        selectedIncidentId={selectedIncident}
+        onOpenIncident={(id) => navigate(`/incidents/${id}`)}
+      />
 
       {/* Main grid: map (left, big) + side panel (right) */}
       <div className="flex-1 min-h-0 grid lg:grid-cols-3 gap-3 px-3 md:px-6 pb-3">
